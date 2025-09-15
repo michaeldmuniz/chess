@@ -54,11 +54,13 @@ public class ChessPiece {
      * @return Collection of valid moves
      */
 
-    public List<ChessMove> getBishopMoves(ChessPosition start) {
+    public List<ChessMove> getBishopMoves(ChessBoard board ,ChessPosition start) {
         List<ChessMove> moves = new ArrayList<>();
 
         int startRow = start.getRow();
         int startCol = start.getColumn();
+
+        ChessPiece piece = board.getPiece(start);
 
         // Four diagonal directions
         int[][] directions = {
@@ -73,10 +75,24 @@ public class ChessPiece {
             int col = startCol + dir[1];
 
             // Keep going in this direction until we leave the board
-            while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
-                moves.add(new ChessMove(start, new ChessPosition(row, col), null));
 
-                row += dir[0]; // move further in same direction
+            while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
+                ChessPosition targetPos = new ChessPosition(row, col);
+                ChessPiece targetPiece = board.getPiece(targetPos);
+
+                if (targetPiece == null) {
+                    // Empty square -> add move, keep going
+                    moves.add(new ChessMove(start, targetPos, null));
+                } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
+                    // Enemy piece -> add capture and stop
+                    moves.add(new ChessMove(start, targetPos, null));
+                    break; // stop in this direction after capture
+                } else {
+                    // Friendly piece -> can't move here or past it
+                    break;
+                }
+
+                row += dir[0];
                 col += dir[1];
             }
         }
@@ -84,13 +100,12 @@ public class ChessPiece {
         return moves;
     }
 
-
-
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
         ChessPiece piece = board.getPiece(myPosition);
-        if(piece.getPieceType() == PieceType.BISHOP){
-            return getBishopMoves(myPosition);
+        if (piece.getPieceType() == PieceType.BISHOP) {
+            return getBishopMoves(board, myPosition);
         }
         return List.of();
     }
+
 }
