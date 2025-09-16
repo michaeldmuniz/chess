@@ -74,6 +74,7 @@ public class ChessPiece {
             int row = startRow + dir[0];
             int col = startCol + dir[1];
 
+
             // Keep going in this direction until we leave the board
 
             while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
@@ -100,10 +101,58 @@ public class ChessPiece {
         return moves;
     }
 
+    public List<ChessMove> getKingMoves(ChessBoard board, ChessPosition start){
+        List<ChessMove> moves = new ArrayList<>();
+        int startRow = start.getRow();
+        int startCol = start.getColumn();
+
+        ChessPiece piece = board.getPiece(start);
+
+        int [][] directions = {
+                {-1,1},
+                {0,1},
+                {1,1},
+                {-1,0},
+                {1,0},
+                {-1,-1},
+                {0,-1},
+                {1,-1}
+        };
+
+        for (int[] dir : directions){
+            int row = startRow + dir[0];
+            int col = startCol + dir[1];
+
+
+            // Make sure we are still on the board
+            if (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
+                ChessPosition targetPos = new ChessPosition(row, col);
+                ChessPiece targetPiece = board.getPiece(targetPos);
+
+                if (targetPiece == null) {
+                    // Empty square -> king can move there
+                    moves.add(new ChessMove(start, targetPos, null));
+                } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
+                    // Enemy piece -> king can capture it
+                    moves.add(new ChessMove(start, targetPos, null));
+                }
+                // If friendly piece is there, do nothing (king cannot move there)
+            }
+
+        }
+
+        return moves;
+    }
+
+
+
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
         ChessPiece piece = board.getPiece(myPosition);
         if (piece.getPieceType() == PieceType.BISHOP) {
             return getBishopMoves(board, myPosition);
+        } else if (piece.getPieceType() == PieceType.KING) {
+            return getKingMoves(board, myPosition);
+
         }
         return List.of();
     }
