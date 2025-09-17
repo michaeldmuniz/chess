@@ -144,6 +144,55 @@ public class ChessPiece {
         return moves;
     }
 
+    public List<ChessMove> getRookMoves(ChessBoard board, ChessPosition start){
+        List<ChessMove> moves = new ArrayList<>();
+        int startRow = start.getRow();
+        int startCol = start.getColumn();
+
+        ChessPiece piece = board.getPiece(start);
+
+        int [][] directions = {
+            {1,0},
+            {0,1},
+            {-1,0},
+            {0,-1}
+        };
+
+
+        for (int[] dir : directions) {
+            int row = startRow + dir[0];
+            int col = startCol + dir[1];
+
+
+            // Keep going in this direction until we leave the board
+
+            while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
+                ChessPosition targetPos = new ChessPosition(row, col);
+                ChessPiece targetPiece = board.getPiece(targetPos);
+
+                if (targetPiece == null) {
+                    // Empty square -> add move, keep going
+                    moves.add(new ChessMove(start, targetPos, null));
+                } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
+                    // Enemy piece -> add capture and stop
+                    moves.add(new ChessMove(start, targetPos, null));
+                    break; // stop in this direction after capture
+                } else {
+                    // Friendly piece -> can't move here or past it
+                    break;
+                }
+
+                row += dir[0];
+                col += dir[1];
+            }
+        }
+
+        return moves;
+
+    }
+
+    
+
 
 
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
@@ -152,8 +201,11 @@ public class ChessPiece {
             return getBishopMoves(board, myPosition);
         } else if (piece.getPieceType() == PieceType.KING) {
             return getKingMoves(board, myPosition);
-
+        } else if (piece.getPieceType() == PieceType.ROOK){
+            return getRookMoves(board, myPosition);
         }
+
+
         return List.of();
     }
 
