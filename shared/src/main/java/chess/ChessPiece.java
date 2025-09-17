@@ -191,7 +191,40 @@ public class ChessPiece {
 
     }
 
-    
+    public List<ChessMove> getKnightMoves(ChessBoard board, ChessPosition start) {
+        List<ChessMove> moves = new ArrayList<>();
+
+        int startRow = start.getRow();
+        int startCol = start.getColumn();
+
+        ChessPiece piece = board.getPiece(start);
+
+        int[][] directions = {
+                { 2,  1}, { 2, -1},
+                {-2,  1}, {-2, -1},
+                { 1,  2}, { 1, -2},
+                {-1,  2}, {-1, -2}
+        };
+
+        for (int[] dir : directions) {
+            int row = startRow + dir[0];
+            int col = startCol + dir[1];
+
+            // Only consider moves that stay on the board
+            if (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
+                ChessPosition targetPos = new ChessPosition(row, col);
+                ChessPiece targetPiece = board.getPiece(targetPos);
+
+                // Add move if square is empty or has enemy
+                if (targetPiece == null || targetPiece.getTeamColor() != piece.getTeamColor()) {
+                    moves.add(new ChessMove(start, targetPos, null));
+                }
+            }
+        }
+
+        return moves;
+    }
+
 
 
 
@@ -203,6 +236,8 @@ public class ChessPiece {
             return getKingMoves(board, myPosition);
         } else if (piece.getPieceType() == PieceType.ROOK){
             return getRookMoves(board, myPosition);
+        } else if (piece.getPieceType() == PieceType.KNIGHT) {
+            return getKnightMoves(board, myPosition);
         }
 
 
