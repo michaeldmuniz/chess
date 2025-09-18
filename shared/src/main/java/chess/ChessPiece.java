@@ -95,6 +95,7 @@ public class ChessPiece {
 
                 row += dir[0];
                 col += dir[1];
+
             }
         }
 
@@ -226,6 +227,99 @@ public class ChessPiece {
     }
 
 
+    public List<ChessMove> getPawnMoves(ChessBoard board, ChessPosition start) {
+        List<ChessMove> moves = new ArrayList<>();
+
+        int startRow = start.getRow();
+        int startCol = start.getColumn();
+
+        ChessPiece piece = board.getPiece(start);
+
+        // Decide which way the pawn moves
+        int direction;
+        int promotionRow;
+        if (piece.getTeamColor() == ChessGame.TeamColor.WHITE) {
+            direction = 1;
+            promotionRow = 8;
+        } else {
+            direction = -1;
+            promotionRow = 1;
+        }
+
+        PieceType[] promotionPieces = {
+                PieceType.QUEEN,
+                PieceType.ROOK,
+                PieceType.BISHOP,
+                PieceType.KNIGHT
+        };
+
+        // ONE STEP FORWARD
+        int oneStepRow = startRow + direction;
+        if (oneStepRow >= 1 && oneStepRow <= 8) {
+            ChessPosition oneStepPos = new ChessPosition(oneStepRow, startCol);
+            if (board.getPiece(oneStepPos) == null) {
+                if (oneStepRow == promotionRow) {
+                    for (PieceType type : promotionPieces) {
+                        moves.add(new ChessMove(start, oneStepPos, type));
+                    }
+                } else {
+                    moves.add(new ChessMove(start, oneStepPos, null));
+
+                    // ---- TWO STEP FORWARD ----
+                    if (piece.getTeamColor() == ChessGame.TeamColor.WHITE && startRow == 2) {
+                        ChessPosition twoStepPos = new ChessPosition(startRow + 2, startCol);
+                        if (board.getPiece(twoStepPos) == null) {
+                            moves.add(new ChessMove(start, twoStepPos, null));
+                        }
+                    }
+                    if (piece.getTeamColor() == ChessGame.TeamColor.BLACK && startRow == 7) {
+                        ChessPosition twoStepPos = new ChessPosition(startRow - 2, startCol);
+                        if (board.getPiece(twoStepPos) == null) {
+                            moves.add(new ChessMove(start, twoStepPos, null));
+                        }
+                    }
+                }
+            }
+        }
+
+        // CAPTURES
+        int captureRow = startRow + direction;
+
+        // Capture to left
+        int leftCol = startCol - 1;
+        if (captureRow >= 1 && captureRow <= 8 && leftCol >= 1) {
+            ChessPosition leftCapturePos = new ChessPosition(captureRow, leftCol);
+            ChessPiece leftPiece = board.getPiece(leftCapturePos);
+            if (leftPiece != null && leftPiece.getTeamColor() != piece.getTeamColor()) {
+                if (captureRow == promotionRow) {
+                    for (PieceType type : promotionPieces) {
+                        moves.add(new ChessMove(start, leftCapturePos, type));
+                    }
+                } else {
+                    moves.add(new ChessMove(start, leftCapturePos, null));
+                }
+            }
+        }
+
+        // Capture to right
+        int rightCol = startCol + 1;
+        if (captureRow >= 1 && captureRow <= 8 && rightCol <= 8) {
+            ChessPosition rightCapturePos = new ChessPosition(captureRow, rightCol);
+            ChessPiece rightPiece = board.getPiece(rightCapturePos);
+            if (rightPiece != null && rightPiece.getTeamColor() != piece.getTeamColor()) {
+                if (captureRow == promotionRow) {
+                    for (PieceType type : promotionPieces) {
+                        moves.add(new ChessMove(start, rightCapturePos, type));
+                    }
+                } else {
+                    moves.add(new ChessMove(start, rightCapturePos, null));
+                }
+            }
+        }
+
+        return moves;
+    }
+
 
 
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
@@ -238,7 +332,10 @@ public class ChessPiece {
             return getRookMoves(board, myPosition);
         } else if (piece.getPieceType() == PieceType.KNIGHT) {
             return getKnightMoves(board, myPosition);
+        } else if (piece.getPieceType() == PieceType.PAWN) {
+            return getPawnMoves(board, myPosition);
         }
+
 
 
         return List.of();
