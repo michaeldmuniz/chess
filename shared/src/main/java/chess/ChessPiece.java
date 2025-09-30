@@ -266,15 +266,10 @@ public class ChessPiece {
                 } else {
                     moves.add(new ChessMove(start, oneStepPos, null));
 
-                    // ---- TWO STEP FORWARD ----
-                    if (piece.getTeamColor() == ChessGame.TeamColor.WHITE && startRow == 2) {
-                        ChessPosition twoStepPos = new ChessPosition(startRow + 2, startCol);
-                        if (board.getPiece(twoStepPos) == null) {
-                            moves.add(new ChessMove(start, twoStepPos, null));
-                        }
-                    }
-                    if (piece.getTeamColor() == ChessGame.TeamColor.BLACK && startRow == 7) {
-                        ChessPosition twoStepPos = new ChessPosition(startRow - 2, startCol);
+// ---- TWO STEP FORWARD ----
+                    if ((piece.getTeamColor() == ChessGame.TeamColor.WHITE && startRow == 2)
+                            || (piece.getTeamColor() == ChessGame.TeamColor.BLACK && startRow == 7)) {
+                        ChessPosition twoStepPos = new ChessPosition(startRow + 2 * direction, startCol);
                         if (board.getPiece(twoStepPos) == null) {
                             moves.add(new ChessMove(start, twoStepPos, null));
                         }
