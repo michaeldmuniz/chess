@@ -135,7 +135,58 @@ public class ChessGame {
      * @return True if the specified team is in check
      */
     public boolean isInCheck(TeamColor teamColor) {
-        throw new RuntimeException("Not implemented");
+        // Step 1: Find the king of the team we are checking
+        ChessPosition kingPos = null;
+
+        for (int row = 1; row <= 8; row++) {
+            for (int col = 1; col <= 8; col++) {
+                ChessPosition pos = new ChessPosition(row, col);
+                ChessPiece piece = board.getPiece(pos);
+
+                if (piece != null) {
+                    if (piece.getTeamColor() == teamColor &&
+                            piece.getPieceType() == ChessPiece.PieceType.KING) {
+                        kingPos = pos; // found the king
+                    }
+                }
+            }
+        }
+
+        // If no king was found (should not happen in a normal game), return false
+        if (kingPos == null) {
+            return false;
+        }
+
+        // Step 2: Figure out which side is the opponent
+        TeamColor opponent;
+        if (teamColor == TeamColor.WHITE) {
+            opponent = TeamColor.BLACK;
+        } else {
+            opponent = TeamColor.WHITE;
+        }
+
+        // Step 3: Look at every piece on the board
+        for (int row = 1; row <= 8; row++) {
+            for (int col = 1; col <= 8; col++) {
+                ChessPosition pos = new ChessPosition(row, col);
+                ChessPiece piece = board.getPiece(pos);
+
+                if (piece != null && piece.getTeamColor() == opponent) {
+                    // Get all moves this piece could make
+                    Collection<ChessMove> moves = piece.pieceMoves(board, pos);
+
+                    // Step 4: If any of those moves attack the king's square -> we are in check
+                    for (ChessMove move : moves) {
+                        if (move.getEndPosition().equals(kingPos)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 5: If no piece could attack the king, then not in check
+        return false;
     }
 
     /**
@@ -165,7 +216,7 @@ public class ChessGame {
      * @param board the new board to use
      */
     public void setBoard(ChessBoard board) {
-        throw new RuntimeException("Not implemented");
+        this.board = board.copy();
     }
 
     /**
@@ -174,6 +225,6 @@ public class ChessGame {
      * @return the chessboard
      */
     public ChessBoard getBoard() {
-        throw new RuntimeException("Not implemented");
+        return this.board.copy();
     }
 }
