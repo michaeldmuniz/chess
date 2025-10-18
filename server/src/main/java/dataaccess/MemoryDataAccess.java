@@ -1,109 +1,51 @@
 package dataaccess;
 
-import model.*;
-import java.util.*;
+import model.UserData;
+import model.AuthData;
 
-public class MemoryDataAccess implements DataAccess {
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class MemoryDataAccess {
 
     private final Map<String, UserData> users = new HashMap<>();
-    private final Map<String, AuthData> auths = new HashMap<>();
-    private final Map<Integer, GameData> games = new HashMap<>();
+    private final Map<String, AuthData> authTokens = new HashMap<>();
 
-    private int nextGameID = 1;
-
-    @Override
-    public void clear() {
+    // Clears all data (used by the /db endpoint)
+    public void clear() throws DataAccessException {
         users.clear();
-        auths.clear();
-        games.clear();
-        nextGameID = 1;
+        authTokens.clear();
     }
 
-    //  USER METHODS
-
-    @Override
-    public void createUser(UserData user) throws DataAccessException {
-        if (user == null || user.username() == null) {
-            throw new DataAccessException("Error: bad request");
-        }
+    // Adds a new user (throws if username already exists)
+    public void insertUser(UserData user) throws DataAccessException {
         if (users.containsKey(user.username())) {
-            throw new DataAccessException("Error: already taken");
+            throw new DataAccessException("already taken");
         }
         users.put(user.username(), user);
     }
 
-    @Override
-    public UserData getUser(String username) throws DataAccessException {
-        var user = users.get(username);
-        if (user == null) {
-            throw new DataAccessException("Error: user not found");
-        }
-        return user;
+    // Gets a user by username
+    public UserData getUser(String username) {
+        return users.get(username);
     }
 
-    // AUTH METHODS
-
-    @Override
-    public void createAuth(AuthData auth) throws DataAccessException {
-        if (auth == null || auth.authToken() == null) {
-            throw new DataAccessException("Error: bad request");
-        }
-        auths.put(auth.authToken(), auth);
-    }
-
-    @Override
-    public AuthData getAuth(String authToken) throws DataAccessException {
-        var auth = auths.get(authToken);
-        if (auth == null) {
-            throw new DataAccessException("Error: unauthorized");
-        }
+    // Creates a new auth token and stores it
+    public AuthData createAuth(String username) {
+        String token = UUID.randomUUID().toString();
+        AuthData auth = new AuthData(token, username);
+        authTokens.put(token, auth);
         return auth;
     }
 
-    @Override
-    public void deleteAuth(String authToken) throws DataAccessException {
-        if (!auths.containsKey(authToken)) {
-            throw new DataAccessException("Error: unauthorized");
-        }
-        auths.remove(authToken);
+    // Gets an auth token
+    public AuthData getAuth(String token) {
+        return authTokens.get(token);
     }
 
-    // GAME METHODS
-
-    @Override
-    public int createGame(GameData game) throws DataAccessException {
-        if (game == null || game.gameName() == null) {
-            throw new DataAccessException("Error: bad request");
-        }
-        int gameID = nextGameID++;
-        var newGame = new GameData(gameID,
-                game.whiteUsername(),
-                game.blackUsername(),
-                game.gameName(),
-                game.game());
-        games.put(gameID, newGame);
-        return gameID;
-    }
-
-    @Override
-    public GameData getGame(int gameID) throws DataAccessException {
-        var game = games.get(gameID);
-        if (game == null) {
-            throw new DataAccessException("Error: game not found");
-        }
-        return game;
-    }
-
-    @Override
-    public Collection<GameData> listGames() {
-        return new ArrayList<>(games.values());
-    }
-
-    @Override
-    public void updateGame(GameData game) throws DataAccessException {
-        if (!games.containsKey(game.gameID())) {
-            throw new DataAccessException("Error: game not found");
-        }
-        games.put(game.gameID(), game);
+    // Deletes an auth token (for logout)
+    public void deleteAuth(String token) {
+        authTokens.remove(token);
     }
 }
