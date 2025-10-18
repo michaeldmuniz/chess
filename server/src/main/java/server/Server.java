@@ -1,6 +1,9 @@
 package server;
 
 import io.javalin.*;
+import dataaccess.MemoryDataAccess;
+import service.ClearService;
+import server.ClearHandler;
 
 public class Server {
 
@@ -9,8 +12,12 @@ public class Server {
     public Server() {
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
-        // Register your endpoints and exception handlers here.
+        // Create data access and service objects
+        var dataAccess = new MemoryDataAccess();
+        var clearService = new ClearService(dataAccess);
 
+        // Register endpoints
+        javalin.delete("/db", new ClearHandler(clearService));
     }
 
     public int run(int desiredPort) {

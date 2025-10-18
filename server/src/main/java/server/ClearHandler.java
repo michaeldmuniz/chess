@@ -5,6 +5,8 @@ import dataaccess.DataAccessException;
 import service.ClearService;
 import io.javalin.http.Context;
 import io.javalin.http.Handler;
+import java.util.Map;
+
 
 // Handles HTTP DELETE requests to /db.
 
