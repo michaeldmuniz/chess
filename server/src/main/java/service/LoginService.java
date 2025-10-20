@@ -2,6 +2,7 @@ package service;
 
 import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
+import dataaccess.MemoryDataAccess;
 import model.AuthData;
 import model.UserData;
 
@@ -24,7 +25,9 @@ public class LoginService {
             throw new DataAccessException("unauthorized");
         }
 
-        AuthData auth = dao.createAuth(username);
+        MemoryDataAccess memoryDAO = (MemoryDataAccess) dao;
+        AuthData auth = memoryDAO.createAuth(username);
+
 
         return auth;
     }
