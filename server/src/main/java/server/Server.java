@@ -1,23 +1,26 @@
 package server;
 
-import io.javalin.*;
+import io.javalin.Javalin;
 import dataaccess.MemoryDataAccess;
 import service.ClearService;
-import server.ClearHandler;
+import service.RegisterService;
 
 public class Server {
 
     private final Javalin javalin;
+    private final MemoryDataAccess dao = new MemoryDataAccess();
 
     public Server() {
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
-        // Create data access and service objects
-        var dataAccess = new MemoryDataAccess();
-        var clearService = new ClearService(dataAccess);
+        ClearService clearService = new ClearService(dao);
+        RegisterService registerService = new RegisterService(dao);
 
-        // Register endpoints
-        javalin.delete("/db", new ClearHandler(clearService));
+        ClearHandler clearHandler = new ClearHandler(clearService);
+        RegisterHandler registerHandler = new RegisterHandler(registerService);
+
+        javalin.delete("/db", clearHandler);   // Clear the "database"
+        javalin.post("/user", registerHandler); // Register new users
     }
 
     public int run(int desiredPort) {

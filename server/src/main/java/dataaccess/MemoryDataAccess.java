@@ -1,51 +1,85 @@
 package dataaccess;
 
-import model.UserData;
-import model.AuthData;
+import model.*;
+import java.util.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
-public class MemoryDataAccess {
+public class MemoryDataAccess implements DataAccess {
 
     private final Map<String, UserData> users = new HashMap<>();
     private final Map<String, AuthData> authTokens = new HashMap<>();
+    private final Map<Integer, GameData> games = new HashMap<>();
 
-    // Clears all data (used by the /db endpoint)
-    public void clear() throws DataAccessException {
+    private int nextGameId = 1;
+
+    @Override
+    public void clear() {
         users.clear();
         authTokens.clear();
+        games.clear();
+        nextGameId = 1;
     }
 
-    // Adds a new user (throws if username already exists)
-    public void insertUser(UserData user) throws DataAccessException {
+    //  USER METHODS
+    @Override
+    public void createUser(UserData user) throws DataAccessException {
         if (users.containsKey(user.username())) {
-            throw new DataAccessException("already taken");
+            throw new DataAccessException("User already exists");
         }
         users.put(user.username(), user);
     }
 
-    // Gets a user by username
+    @Override
     public UserData getUser(String username) {
         return users.get(username);
     }
 
-    // Creates a new auth token and stores it
+    //  AUTH METHODS
+    @Override
+    public void createAuth(AuthData auth) {
+        authTokens.put(auth.authToken(), auth);
+    }
+
+    @Override
+    public AuthData getAuth(String authToken) {
+        return authTokens.get(authToken);
+    }
+
+    @Override
+    public void deleteAuth(String authToken) {
+        authTokens.remove(authToken);
+    }
+
+    //  GAME METHODS
+    @Override
+    public int createGame(GameData game) {
+        int id = nextGameId++;
+        games.put(id, game);
+        return id;
+    }
+
+    @Override
+    public GameData getGame(int gameID) {
+        return games.get(gameID);
+    }
+
+    @Override
+    public Collection<GameData> listGames() {
+        return games.values();
+    }
+
+    @Override
+    public void updateGame(GameData game) throws DataAccessException {
+        if (!games.containsKey(game.gameID())) {
+            throw new DataAccessException("Game not found");
+        }
+        games.put(game.gameID(), game);
+    }
+
+    //  HELPER: Create auth token
     public AuthData createAuth(String username) {
-        String token = UUID.randomUUID().toString();
+        String token = java.util.UUID.randomUUID().toString();
         AuthData auth = new AuthData(token, username);
         authTokens.put(token, auth);
         return auth;
-    }
-
-    // Gets an auth token
-    public AuthData getAuth(String token) {
-        return authTokens.get(token);
-    }
-
-    // Deletes an auth token (for logout)
-    public void deleteAuth(String token) {
-        authTokens.remove(token);
     }
 }
