@@ -29,7 +29,7 @@ public class GameService {
                 0,
                 null,
                 null,
-                gameName, 
+                gameName,
                 newGame
         );
 
