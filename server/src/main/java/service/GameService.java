@@ -1,12 +1,10 @@
 package service;
 
+import chess.ChessGame;
 import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import model.AuthData;
 import model.GameData;
-import chess.ChessGame;
-
-import java.util.Collection;
 
 public class GameService {
 
@@ -16,34 +14,25 @@ public class GameService {
         this.dao = dao;
     }
 
-    public GameData createGame(String authToken, String gameName) throws DataAccessException {
+    public int createGame(String authToken, String gameName) throws DataAccessException {
         AuthData auth = dao.getAuth(authToken);
         if (auth == null) {
             throw new DataAccessException("unauthorized");
         }
 
-        ChessGame game = new ChessGame();
+        if (gameName == null || gameName.isBlank()) {
+            throw new DataAccessException("bad request");
+        }
 
-        GameData newGame = new GameData(
-                0,               // temp ID, real one assigned in DAO
-                null,            // whiteUsername
-                null,            // blackUsername
-                gameName,
-                game
+        ChessGame newGame = new ChessGame();
+        GameData gameData = new GameData(
+                0,
+                null,
+                null,
+                gameName, 
+                newGame
         );
 
-        int gameID = dao.createGame(newGame);
-
-        return dao.getGame(gameID);
-    }
-
-
-    public Collection<GameData> listGames(String authToken) throws DataAccessException {
-        AuthData auth = dao.getAuth(authToken);
-        if (auth == null) {
-            throw new DataAccessException("unauthorized");
-        }
-
-        return dao.listGames();
+        return dao.createGame(gameData);
     }
 }
