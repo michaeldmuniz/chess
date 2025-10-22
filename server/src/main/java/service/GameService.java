@@ -5,6 +5,12 @@ import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import model.AuthData;
 import model.GameData;
+import model.GameData;
+import model.AuthData;
+import dataaccess.DataAccessException;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class GameService {
 
@@ -35,4 +41,15 @@ public class GameService {
 
         return dao.createGame(gameData);
     }
+    public List<GameData> listGames(String authToken) throws DataAccessException {
+        // 1. Make sure the user is authorized.
+        AuthData auth = dao.getAuth(authToken);
+        if (auth == null) {
+            throw new DataAccessException("unauthorized");
+        }
+
+        // 2. Retrieve all games from the DAO.
+        return new ArrayList<>(dao.listGames());
+    }
+
 }

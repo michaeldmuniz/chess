@@ -28,12 +28,16 @@ public class Server {
         LoginHandler loginHandler = new LoginHandler(loginService);
         LogoutHandler logoutHandler = new LogoutHandler(logoutService);
         GameHandler gameHandler = new GameHandler(gameService);
+        ListGamesHandler listGamesHandler = new ListGamesHandler(gameService);
+
 
         javalin.delete("/db", clearHandler);   // Clear the "database"
         javalin.post("/user", registerHandler); // Register new users
         javalin.post("/session", loginHandler); // Log in existing users
         javalin.delete("/session", logoutHandler);
         javalin.post("/game", gameHandler); // Create game
+        javalin.get("/game", listGamesHandler);
+
     }
 
     public int run(int desiredPort) {
