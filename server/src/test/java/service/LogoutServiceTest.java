@@ -38,7 +38,7 @@ public class LogoutServiceTest {
     }
 
     @Test
-    void negativeLogout_invalidToken() {
+    void negativeLogoutInvalidToken() {
         assertThrows(Exception.class, () -> logoutService.logout("invalid_token"));
     }
 }

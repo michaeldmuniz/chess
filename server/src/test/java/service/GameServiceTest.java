@@ -39,7 +39,7 @@ public class GameServiceTest {
     }
 
     @Test
-    void negativeCreateGame_invalidToken() {
+    void negativeCreateGameInvalidToken() {
         assertThrows(Exception.class, () -> gameService.createGame("fake_token", "InvalidGame"));
     }
 
@@ -53,7 +53,7 @@ public class GameServiceTest {
     }
 
     @Test
-    void negativeListGames_invalidToken() {
+    void negativeListGamesInvalidToken() {
         assertThrows(Exception.class, () -> gameService.listGames("bad_token"));
     }
 
@@ -67,16 +67,15 @@ public class GameServiceTest {
     }
 
     @Test
-    void negativeJoinGame_alreadyTaken() throws Exception {
+    void negativeJoinGameAlreadyTaken() throws Exception {
         var gameID = gameService.createGame(authToken, "TakenGame");
         gameService.joinGame(authToken, "WHITE", gameID);
 
-        // Try joining same color again — should throw
         assertThrows(Exception.class, () -> gameService.joinGame(authToken, "WHITE", gameID));
     }
 
     @Test
-    void negativeJoinGame_invalidGame() {
+    void negativeJoinGameInvalidGame() {
         assertThrows(Exception.class, () -> gameService.joinGame(authToken, "BLACK", 9999));
     }
 }

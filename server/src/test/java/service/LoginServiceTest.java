@@ -32,7 +32,7 @@ public class LoginServiceTest {
     }
 
     @Test
-    void negativeLogin_wrongPassword() {
+    void negativeLoginWrongPassword() {
         assertThrows(Exception.class, () -> loginService.login("testUser", "wrongPassword"));
     }
 }

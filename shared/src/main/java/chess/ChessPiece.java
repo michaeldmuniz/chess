@@ -54,54 +54,40 @@ public class ChessPiece {
      *
      * @return Collection of valid moves
      */
-
-    public List<ChessMove> getBishopMoves(ChessBoard board ,ChessPosition start) {
+    private List<ChessMove> generateSlidingMoves(ChessBoard board, ChessPosition start, int[][] directions) {
         List<ChessMove> moves = new ArrayList<>();
-
-        int startRow = start.getRow();
-        int startCol = start.getColumn();
-
         ChessPiece piece = board.getPiece(start);
 
-        // Four diagonal directions
-        int[][] directions = {
-                {1,  1},  // up-right
-                {1, -1},  // up-left
-                {-1, 1},  // down-right
-                {-1,-1}   // down-left
-        };
-
         for (int[] dir : directions) {
-            int row = startRow + dir[0];
-            int col = startCol + dir[1];
-
-
-            // Keep going in this direction until we leave the board
+            int row = start.getRow() + dir[0];
+            int col = start.getColumn() + dir[1];
 
             while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
                 ChessPosition targetPos = new ChessPosition(row, col);
                 ChessPiece targetPiece = board.getPiece(targetPos);
 
                 if (targetPiece == null) {
-                    // Empty square -> add move, keep going
                     moves.add(new ChessMove(start, targetPos, null));
                 } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
-                    // Enemy piece -> add capture and stop
                     moves.add(new ChessMove(start, targetPos, null));
-                    break; // stop in this direction after capture
+                    break;
                 } else {
-                    // Friendly piece -> can't move here or past it
                     break;
                 }
 
                 row += dir[0];
                 col += dir[1];
-
             }
         }
 
         return moves;
     }
+
+    public List<ChessMove> getBishopMoves(ChessBoard board, ChessPosition start) {
+        int[][] directions = { {1, 1}, {1, -1}, {-1, 1}, {-1, -1} };
+        return generateSlidingMoves(board, start, directions);
+    }
+
 
     public List<ChessMove> getKingMoves(ChessBoard board, ChessPosition start){
         List<ChessMove> moves = new ArrayList<>();
@@ -146,51 +132,9 @@ public class ChessPiece {
         return moves;
     }
 
-    public List<ChessMove> getRookMoves(ChessBoard board, ChessPosition start){
-        List<ChessMove> moves = new ArrayList<>();
-        int startRow = start.getRow();
-        int startCol = start.getColumn();
-
-        ChessPiece piece = board.getPiece(start);
-
-        int [][] directions = {
-            {1,0},
-            {0,1},
-            {-1,0},
-            {0,-1}
-        };
-
-
-        for (int[] dir : directions) {
-            int row = startRow + dir[0];
-            int col = startCol + dir[1];
-
-
-            // Keep going in this direction until we leave the board
-
-            while (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
-                ChessPosition targetPos = new ChessPosition(row, col);
-                ChessPiece targetPiece = board.getPiece(targetPos);
-
-                if (targetPiece == null) {
-                    // Empty square -> add move, keep going
-                    moves.add(new ChessMove(start, targetPos, null));
-                } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
-                    // Enemy piece -> add capture and stop
-                    moves.add(new ChessMove(start, targetPos, null));
-                    break; // stop in this direction after capture
-                } else {
-                    // Friendly piece -> can't move here or past it
-                    break;
-                }
-
-                row += dir[0];
-                col += dir[1];
-            }
-        }
-
-        return moves;
-
+    public List<ChessMove> getRookMoves(ChessBoard board, ChessPosition start) {
+        int[][] directions = { {1, 0}, {0, 1}, {-1, 0}, {0, -1} };
+        return generateSlidingMoves(board, start, directions);
     }
 
     public List<ChessMove> getKnightMoves(ChessBoard board, ChessPosition start) {
@@ -265,18 +209,11 @@ public class ChessPiece {
                     }
                 } else {
                     moves.add(new ChessMove(start, oneStepPos, null));
-
-// ---- TWO STEP FORWARD ----
-                    if ((piece.getTeamColor() == ChessGame.TeamColor.WHITE && startRow == 2)
-                            || (piece.getTeamColor() == ChessGame.TeamColor.BLACK && startRow == 7)) {
-                        ChessPosition twoStepPos = new ChessPosition(startRow + 2 * direction, startCol);
-                        if (board.getPiece(twoStepPos) == null) {
-                            moves.add(new ChessMove(start, twoStepPos, null));
-                        }
-                    }
+                    handleTwoStepForward(moves, board, piece, start, direction, startRow, startCol);
                 }
             }
         }
+
 
         // CAPTURES
         int captureRow = startRow + direction;
@@ -315,48 +252,30 @@ public class ChessPiece {
         return moves;
     }
 
-    public List<ChessMove> getQueenMoves(ChessBoard board, ChessPosition start){
-        List<ChessMove> moves = new ArrayList<>();
-
-        int startCol = start.getColumn();
-        int startRow = start.getRow();
-
-        ChessPiece piece = board.getPiece(start);
-
-        int [][] directions = {
-                {-1,1},
-                {0,1},
-                {1,1},
-                {-1,0},
-                {1,0},
-                {-1,-1},
-                {0,-1},
-                {1,-1}
-        };
-
-        for(int[] dir : directions) {
-            int col = startCol + dir[1];
-            int row = startRow + dir[0];
-
-            while (col >= 1 && col <= 8 && row >= 1 && row <= 8) {
-                ChessPosition targetPos = new ChessPosition(row, col);
-                ChessPiece targetPiece = board.getPiece(targetPos);
-
-                if (targetPiece == null ) {
-                    moves.add(new ChessMove(start, targetPos, null));
-                } else if (targetPiece.getTeamColor() != piece.getTeamColor()) {
-                    moves.add(new ChessMove(start, targetPos, null));
-                    break;
-                }
-                else {
-                    break;
-                }
-                col += dir[1];
-                row += dir[0];
+    private void handleTwoStepForward(List<ChessMove> moves, ChessBoard board,
+                                      ChessPiece piece, ChessPosition start,
+                                      int direction, int startRow, int startCol) {
+        boolean isWhiteStart = piece.getTeamColor() == ChessGame.TeamColor.WHITE && startRow == 2;
+        boolean isBlackStart = piece.getTeamColor() == ChessGame.TeamColor.BLACK && startRow == 7;
+        if (isWhiteStart || isBlackStart) {
+            ChessPosition twoStepPos = new ChessPosition(startRow + 2 * direction, startCol);
+            if (board.getPiece(twoStepPos) == null) {
+                moves.add(new ChessMove(start, twoStepPos, null));
             }
         }
-        return moves;
     }
+
+
+
+    public List<ChessMove> getQueenMoves(ChessBoard board, ChessPosition start) {
+        int[][] directions = {
+                {-1, 1}, {0, 1}, {1, 1},
+                {-1, 0}, {1, 0},
+                {-1, -1}, {0, -1}, {1, -1}
+        };
+        return generateSlidingMoves(board, start, directions);
+    }
+
 
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
         ChessPiece piece = board.getPiece(myPosition);
