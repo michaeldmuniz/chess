@@ -28,7 +28,7 @@ public class RegisterServiceTest {
     }
 
     @Test
-    void negativeRegister_duplicateUser() throws Exception {
+    void negativeRegisterDuplicateUser() throws Exception {
         var request = new UserData("dupeUser", "password", "email@example.com");
         service.register(request);
 
