@@ -29,8 +29,15 @@ public class JoinGameHandler implements Handler {
 
             var body = gson.fromJson(ctx.body(), Map.class);
             String playerColor = (String) body.get("playerColor");
-            Double gameIDDouble = (Double) body.get("gameID");
-            int gameID = gameIDDouble.intValue();
+            Object gameIdObj = body.get("gameID");
+
+            if (gameIdObj == null || !(gameIdObj instanceof Number)) {
+                ctx.status(400);
+                ctx.result(gson.toJson(Map.of("message", "Error: bad request")));
+                return;
+            }
+
+            int gameID = ((Number) gameIdObj).intValue();
 
             service.joinGame(authToken, playerColor, gameID);
 
@@ -46,8 +53,8 @@ public class JoinGameHandler implements Handler {
             }
             ctx.result(gson.toJson(Map.of("message", "Error: " + e.getMessage())));
         } catch (Exception e) {
-            ctx.status(500);
-            ctx.result(gson.toJson(Map.of("message", "Error: unexpected failure")));
+            ctx.status(400);
+            ctx.result(gson.toJson(Map.of("message", "Error: bad request")));
         }
     }
 }
