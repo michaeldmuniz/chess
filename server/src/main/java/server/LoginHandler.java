@@ -45,7 +45,7 @@ public class LoginHandler implements Handler {
                 ctx.status(400);
                 ctx.result(gson.toJson(Map.of("message", "Error: bad request")));
             } else {
-                ctx.status(500);
+                ctx.status(400);
                 ctx.result(gson.toJson(Map.of("message", "Error: " + message)));
             }
 
