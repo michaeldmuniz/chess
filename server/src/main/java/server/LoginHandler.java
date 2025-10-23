@@ -9,7 +9,6 @@ import service.LoginService;
 
 import java.util.Map;
 
-
 public class LoginHandler implements Handler {
 
     private final LoginService service;
@@ -26,22 +25,31 @@ public class LoginHandler implements Handler {
             String username = request.get("username");
             String password = request.get("password");
 
+            if (username == null || password == null || username.isBlank() || password.isBlank()) {
+                ctx.status(400);
+                ctx.result(gson.toJson(Map.of("message", "Error: bad request")));
+                return;
+            }
+
             AuthData auth = service.login(username, password);
 
             ctx.status(200);
             ctx.result(gson.toJson(auth));
 
         } catch (DataAccessException e) {
-            // Handle known problems
-            if (e.getMessage().equals("unauthorized")) {
+            String message = e.getMessage();
+            if ("unauthorized".equalsIgnoreCase(message)) {
+                ctx.status(401);
+                ctx.result(gson.toJson(Map.of("message", "Error: unauthorized")));
+            } else if ("bad request".equalsIgnoreCase(message)) {
                 ctx.status(400);
+                ctx.result(gson.toJson(Map.of("message", "Error: bad request")));
             } else {
                 ctx.status(500);
+                ctx.result(gson.toJson(Map.of("message", "Error: " + message)));
             }
-            ctx.result(gson.toJson(Map.of("message", "Error: " + e.getMessage())));
 
         } catch (Exception e) {
-            // Handle unexpected problems
             ctx.status(500);
             ctx.result(gson.toJson(Map.of("message", "Error: unexpected failure")));
         }
