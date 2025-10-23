@@ -34,7 +34,7 @@ public class LoginHandler implements Handler {
         } catch (DataAccessException e) {
             // Handle known problems
             if (e.getMessage().equals("unauthorized")) {
-                ctx.status(401);
+                ctx.status(400);
             } else {
                 ctx.status(500);
             }
