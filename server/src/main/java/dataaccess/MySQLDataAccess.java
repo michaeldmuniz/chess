@@ -7,6 +7,9 @@ import com.google.gson.Gson;
 import java.sql.Connection;
 import java.util.Collection;
 import java.util.List;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
 
 public class MySQLDataAccess implements DataAccess {
 
@@ -86,12 +89,43 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "INSERT INTO user (username, password, email) VALUES (?, ?, ?)";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setString(1, user.username());
+            stmt.setString(2, user.password());
+            stmt.setString(3, user.email());
+            stmt.executeUpdate();
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error creating user: " + e.getMessage());
+        }
     }
 
     @Override
     public UserData getUser(String username) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "SELECT username, password, email FROM user WHERE username = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new UserData(
+                            rs.getString("username"),
+                            rs.getString("password"),
+                            rs.getString("email")
+                    );
+                }
+                return null;
+            }
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error retrieving user: " + e.getMessage());
+        }
     }
 
     @Override
