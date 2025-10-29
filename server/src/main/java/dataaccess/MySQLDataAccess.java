@@ -21,8 +21,21 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void clear() throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        try (var conn = DatabaseManager.getConnection()) {
+            try (var stmt = conn.prepareStatement("TRUNCATE TABLE auth")) {
+                stmt.executeUpdate();
+            }
+            try (var stmt = conn.prepareStatement("TRUNCATE TABLE game")) {
+                stmt.executeUpdate();
+            }
+            try (var stmt = conn.prepareStatement("TRUNCATE TABLE user")) {
+                stmt.executeUpdate();
+            }
+        } catch (Exception e) {
+            throw new DataAccessException("Error clearing database: " + e.getMessage());
+        }
     }
+
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
@@ -68,4 +81,16 @@ public class MySQLDataAccess implements DataAccess {
     public void updateGame(GameData game) throws DataAccessException {
         throw new DataAccessException("not implemented");
     }
+    public void testConnection() throws DataAccessException {
+        try (var conn = DatabaseManager.getConnection()) {
+            try (var stmt = conn.prepareStatement("SELECT 1+1")) {
+                var rs = stmt.executeQuery();
+                rs.next();
+                System.out.println("Database connection test successful! Result: " + rs.getInt(1));
+            }
+        } catch (Exception e) {
+            throw new DataAccessException("Connection test failed: " + e.getMessage());
+        }
+    }
+
 }

@@ -1,15 +1,15 @@
 package service;
 
+import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
-import dataaccess.MemoryDataAccess;
 import model.UserData;
 import model.AuthData;
 
 public class RegisterService {
 
-    private final MemoryDataAccess dao;
+    private final DataAccess dao;
 
-    public RegisterService(MemoryDataAccess dao) {
+    public RegisterService(DataAccess dao) {
         this.dao = dao;
     }
 
@@ -26,6 +26,10 @@ public class RegisterService {
 
         dao.createUser(request);
 
-        return dao.createAuth(request.username());
+        String token = java.util.UUID.randomUUID().toString();
+        AuthData auth = new AuthData(token, request.username());
+        dao.createAuth(auth);
+        return auth;
     }
+
 }

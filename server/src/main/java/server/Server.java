@@ -1,20 +1,30 @@
 package server;
 
 import io.javalin.Javalin;
+import dataaccess.DataAccess;
 import dataaccess.MemoryDataAccess;
+import dataaccess.MySQLDataAccess;
+import dataaccess.DataAccessException;
 import service.ClearService;
 import service.RegisterService;
 import service.LoginService;
 import service.LogoutService;
 import service.GameService;
 
-
 public class Server {
 
     private final Javalin javalin;
-    private final MemoryDataAccess dao = new MemoryDataAccess();
+    private final DataAccess dao;
 
     public Server() {
+        try {
+            // Switch between MySQL or in-memory
+            dao = new MySQLDataAccess();
+            // dao = new MemoryDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Failed to initialize database: " + e.getMessage());
+        }
+
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
         ClearService clearService = new ClearService(dao);
@@ -31,16 +41,13 @@ public class Server {
         ListGamesHandler listGamesHandler = new ListGamesHandler(gameService);
         JoinGameHandler joinGameHandler = new JoinGameHandler(gameService);
 
-
-
         javalin.delete("/db", clearHandler);   // Clear the "database"
         javalin.post("/user", registerHandler); // Register new users
         javalin.post("/session", loginHandler); // Log in existing users
-        javalin.delete("/session", logoutHandler);
+        javalin.delete("/session", logoutHandler); // Log out
         javalin.post("/game", gameHandler); // Create game
-        javalin.get("/game", listGamesHandler);
-        javalin.put("/game", joinGameHandler);
-
+        javalin.get("/game", listGamesHandler); // List games
+        javalin.put("/game", joinGameHandler); // Join game
     }
 
     public int run(int desiredPort) {
