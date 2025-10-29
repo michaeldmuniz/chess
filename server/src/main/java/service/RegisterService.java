@@ -4,6 +4,8 @@ import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import model.UserData;
 import model.AuthData;
+import org.mindrot.jbcrypt.BCrypt;
+
 
 public class RegisterService {
 
@@ -24,7 +26,16 @@ public class RegisterService {
             throw new DataAccessException("already taken");
         }
 
-        dao.createUser(request);
+        String hashedPassword = BCrypt.hashpw(request.password(), BCrypt.gensalt());
+
+        UserData userWithHashedPassword = new UserData(
+                request.username(),
+                hashedPassword,
+                request.email()
+        );
+
+        dao.createUser(userWithHashedPassword);
+
 
         String token = java.util.UUID.randomUUID().toString();
         AuthData auth = new AuthData(token, request.username());

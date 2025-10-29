@@ -5,6 +5,8 @@ import dataaccess.DataAccessException;
 import dataaccess.MemoryDataAccess;
 import model.AuthData;
 import model.UserData;
+import org.mindrot.jbcrypt.BCrypt;
+
 
 public class LoginService {
 
@@ -21,14 +23,14 @@ public class LoginService {
             throw new DataAccessException("unauthorized");
         }
 
-        if (!user.password().equals(password)) {
+        if (!BCrypt.checkpw(password, user.password())) {
             throw new DataAccessException("unauthorized");
         }
 
-        MemoryDataAccess memoryDAO = (MemoryDataAccess) dao;
-        AuthData auth = memoryDAO.createAuth(username);
-
+        AuthData auth = new AuthData(java.util.UUID.randomUUID().toString(), username);
+        dao.createAuth(auth);
 
         return auth;
     }
+
 }

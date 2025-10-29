@@ -17,7 +17,54 @@ public class MySQLDataAccess implements DataAccess {
     }
 
     private void configureDatabase() throws DataAccessException {
+        try (var conn = DatabaseManager.getConnection()) {
+            try (var stmt = conn.prepareStatement("CREATE DATABASE IF NOT EXISTS chess")) {
+                stmt.executeUpdate();
+            }
+
+            conn.setCatalog("chess");
+
+            try (var stmt = conn.prepareStatement("""
+            CREATE TABLE IF NOT EXISTS user (
+                username VARCHAR(50) PRIMARY KEY,
+                password VARCHAR(255) NOT NULL,
+                email VARCHAR(100) NOT NULL
+            )
+        """)) {
+                stmt.executeUpdate();
+            }
+
+            try (var stmt = conn.prepareStatement("""
+            CREATE TABLE IF NOT EXISTS auth (
+                authToken VARCHAR(255) PRIMARY KEY,
+                username VARCHAR(50) NOT NULL,
+                FOREIGN KEY (username) REFERENCES user(username) ON DELETE CASCADE
+            )
+        """)) {
+                stmt.executeUpdate();
+            }
+
+            try (var stmt = conn.prepareStatement("""
+            CREATE TABLE IF NOT EXISTS game (
+                gameID INT AUTO_INCREMENT PRIMARY KEY,
+                whiteUsername VARCHAR(50),
+                blackUsername VARCHAR(50),
+                gameName VARCHAR(100) NOT NULL,
+                gameJson TEXT NOT NULL,
+                FOREIGN KEY (whiteUsername) REFERENCES user(username) ON DELETE SET NULL,
+                FOREIGN KEY (blackUsername) REFERENCES user(username) ON DELETE SET NULL
+            )
+        """)) {
+                stmt.executeUpdate();
+            }
+
+            System.out.println("Database and tables verified/created successfully.");
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error configuring database: " + e.getMessage());
+        }
     }
+
 
     @Override
     public void clear() throws DataAccessException {
