@@ -214,12 +214,64 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "SELECT gameID, whiteUsername, blackUsername, gameName, gameJSON FROM game WHERE gameID = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setInt(1, gameID);
+
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String gameJson = rs.getString("gameJSON");
+                    ChessGame game = gson.fromJson(gameJson, ChessGame.class);
+
+                    return new GameData(
+                            rs.getInt("gameID"),
+                            rs.getString("whiteUsername"),
+                            rs.getString("blackUsername"),
+                            rs.getString("gameName"),
+                            game
+                    );
+                }
+            }
+
+            return null; // Game not found
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error retrieving game: " + e.getMessage());
+        }
     }
 
     @Override
     public Collection<GameData> listGames() throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var games = new java.util.ArrayList<GameData>();
+        var sql = "SELECT gameID, whiteUsername, blackUsername, gameName, gameJSON FROM game";
+
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql);
+             var rs = stmt.executeQuery()) {
+
+            conn.setCatalog("chess");
+
+            while (rs.next()) {
+                String gameJson = rs.getString("gameJSON");
+                ChessGame game = gson.fromJson(gameJson, ChessGame.class);
+
+                games.add(new GameData(
+                        rs.getInt("gameID"),
+                        rs.getString("whiteUsername"),
+                        rs.getString("blackUsername"),
+                        rs.getString("gameName"),
+                        game
+                ));
+            }
+
+            return games;
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error listing games: " + e.getMessage());
+        }
     }
 
     @Override
