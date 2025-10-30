@@ -184,7 +184,32 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public int createGame(GameData game) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "INSERT INTO game (whiteUsername, blackUsername, gameName, gameJSON) VALUES (?, ?, ?, ?)";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+
+            conn.setCatalog("chess");
+
+            String gameJson = gson.toJson(game.game()); // Serialize ChessGame object
+
+            stmt.setString(1, game.whiteUsername());
+            stmt.setString(2, game.blackUsername());
+            stmt.setString(3, game.gameName());
+            stmt.setString(4, gameJson);
+
+            stmt.executeUpdate();
+
+            try (var rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1); // Return the auto-generated gameID
+                }
+            }
+
+            throw new DataAccessException("Game ID not generated");
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error creating game: " + e.getMessage());
+        }
     }
 
     @Override
