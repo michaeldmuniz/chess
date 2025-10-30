@@ -130,17 +130,56 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void createAuth(AuthData auth) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "INSERT INTO auth (authToken, username) VALUES (?, ?)";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setString(1, auth.authToken());
+            stmt.setString(2, auth.username());
+            stmt.executeUpdate();
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error creating auth: " + e.getMessage());
+        }
     }
 
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "SELECT authToken, username FROM auth WHERE authToken = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setString(1, authToken);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new AuthData(
+                            rs.getString("authToken"),
+                            rs.getString("username")
+                    );
+                }
+                return null;
+            }
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error retrieving auth: " + e.getMessage());
+        }
     }
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
-        throw new DataAccessException("not implemented");
+        var sql = "DELETE FROM auth WHERE authToken = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            conn.setCatalog("chess");
+            stmt.setString(1, authToken);
+            stmt.executeUpdate();
+
+        } catch (Exception e) {
+            throw new DataAccessException("Error deleting auth: " + e.getMessage());
+        }
     }
 
     @Override
