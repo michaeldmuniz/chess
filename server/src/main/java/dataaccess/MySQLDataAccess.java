@@ -313,4 +313,16 @@ public class MySQLDataAccess implements DataAccess {
         }
     }
 
+    public void testSerialization() {
+        var game = new chess.ChessGame();
+        var gson = new Gson();
+
+        String json = gson.toJson(game);
+        System.out.println("Serialized Game JSON: " + json.substring(0, Math.min(200, json.length())) + "...");
+
+        var restored = gson.fromJson(json, chess.ChessGame.class);
+        System.out.println("Deserialized Game Object: " + restored.getClass().getSimpleName());
+    }
+
+
 }
