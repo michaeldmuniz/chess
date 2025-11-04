@@ -74,4 +74,17 @@ public class DatabaseManager {
         var port = Integer.parseInt(props.getProperty("db.port"));
         connectionUrl = String.format("jdbc:mysql://%s:%d", host, port);
     }
+
+    public static String getDatabaseName() {
+        return databaseName;
+    }
+
+    public static String getDbUsername() {
+        return dbUsername;
+    }
+
+    public static String getDbPassword() {
+        return dbPassword;
+    }
+
 }
