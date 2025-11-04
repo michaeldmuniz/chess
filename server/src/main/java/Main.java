@@ -6,8 +6,6 @@ public class Main {
     public static void main(String[] args) {
         try {
             MySQLDataAccess dao = new MySQLDataAccess();
-            dao.testConnection();
-            ((MySQLDataAccess) dao).testSerialization();
         } catch (DataAccessException e) {
             System.out.println(" Database connection failed: " + e.getMessage());
             return;
