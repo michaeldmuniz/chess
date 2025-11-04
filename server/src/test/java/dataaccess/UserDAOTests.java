@@ -27,7 +27,7 @@ public class UserDAOTests {
     }
 
     @Test
-    public void createUserNegative_duplicateUsername() throws DataAccessException {
+    public void createUserNegativeDuplicateUsername() throws DataAccessException {
         var user1 = new UserData("alice", "pw", "a@x.com");
         dao.createUser(user1);
 

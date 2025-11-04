@@ -60,7 +60,7 @@ public class MySQLDataAccess implements DataAccess {
                 gameStmt.executeUpdate();
             }
 
-            System.out.println("✅ Tables verified for database: " + dbName);
+            System.out.println("Tables verified for database: " + dbName);
 
         } catch (SQLException e) {
             throw new DataAccessException("Couldn't initialize tables properly", e);
@@ -78,7 +78,7 @@ public class MySQLDataAccess implements DataAccess {
                     stmt.executeUpdate();
                 }
             }
-            System.out.println("🧹 All tables cleared successfully.");
+            System.out.println(" All tables cleared successfully.");
         } catch (SQLException e) {
             throw new DataAccessException("Failed to clear tables", e);
         }
