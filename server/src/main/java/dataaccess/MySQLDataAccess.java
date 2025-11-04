@@ -48,14 +48,12 @@ public class MySQLDataAccess implements DataAccess {
 
             try (var gameStmt = conn.prepareStatement("""
                 CREATE TABLE IF NOT EXISTS game (
-                    gameID INT AUTO_INCREMENT PRIMARY KEY,
-                    whiteUsername VARCHAR(50),
-                    blackUsername VARCHAR(50),
-                    gameName VARCHAR(100) NOT NULL,
-                    gameJSON TEXT NOT NULL,
-                    FOREIGN KEY (whiteUsername) REFERENCES user(username) ON DELETE SET NULL,
-                    FOREIGN KEY (blackUsername) REFERENCES user(username) ON DELETE SET NULL
-                )
+                     gameID INT AUTO_INCREMENT PRIMARY KEY,
+                     whiteUsername VARCHAR(50),
+                     blackUsername VARCHAR(50),
+                     gameName VARCHAR(100) NOT NULL,
+                     gameJSON TEXT NOT NULL
+                 )
             """)) {
                 gameStmt.executeUpdate();
             }
