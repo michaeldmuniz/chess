@@ -1,59 +1,48 @@
 package client;
 
+import model.*;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import com.google.gson.Gson;
 
 public class ServerFacade {
+    private final String serverUrl;
+    private final Gson gson = new Gson();
 
-    private final String baseUrl;
-    private String authToken;
-
-    public ServerFacade(int port) {
-        this.baseUrl = "http://localhost:" + port;
+    public ServerFacade(String serverUrl) {
+        this.serverUrl = serverUrl;
     }
 
-    public void clear() {
-    }
-
-    private String request(String method, String path) {
-        HttpURLConnection conn = null;
+    public void register(Object req) throws IOException {}
+    public void login(Object req) throws IOException {}
+    public void logout(String authToken) throws IOException {}
+    public void createGame(Object req) throws IOException {}
+    public void listGames(String authToken) throws IOException {}
+    public void joinGame(Object req) throws IOException {}
+    public void clear() throws IOException {
+        var conn = makeConnection("/db", "DELETE");
         try {
-            var url = new URL(baseUrl + path);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod(method);
-            conn.setRequestProperty("Accept", "application/json");
-
-            // Add auth header later when we log in
-            if (authToken != null) {
-                conn.setRequestProperty("Authorization", authToken);
-            }
-
             conn.connect();
+            var status = conn.getResponseCode();
 
-            int code = conn.getResponseCode();
-            if (code / 100 != 2) {
-                throw new RuntimeException("Request failed with code " + code);
+            if (status != HttpURLConnection.HTTP_OK) {
+                System.out.println("⚠Clear failed. Status: " + status);
+            } else {
+                System.out.println("Database cleared successfully.");
             }
-
-            return readAll(conn.getInputStream());
-
-        } catch (IOException e) {
-            throw new RuntimeException("HTTP problem: " + e.getMessage(), e);
         } finally {
-            if (conn != null) conn.disconnect();
+            conn.disconnect();
         }
     }
 
-    private static String readAll(InputStream in) throws IOException {
-        if (in == null) return "";
-        var sb = new StringBuilder();
-        var buf = new byte[1024];
-        int n;
-        while ((n = in.read(buf)) > 0) {
-            sb.append(new String(buf, 0, n));
-        }
-        return sb.toString();
+
+    private HttpURLConnection makeConnection(String path, String method) throws IOException {
+        var url = new URL(serverUrl + path);
+        var conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod(method);
+        conn.setDoOutput(true);
+        conn.addRequestProperty("Accept", "application/json");
+        return conn;
     }
 }

@@ -26,4 +26,12 @@ public class ServerFacadeTests {
         Assertions.assertTrue(true);
     }
 
+    @Test
+    public void clearWorks() throws Exception {
+        var facade = new ServerFacade("http://localhost:8080");
+        facade.clear();
+        Assertions.assertTrue(true); // placeholder assertion, just check no crash
+    }
+
+
 }
