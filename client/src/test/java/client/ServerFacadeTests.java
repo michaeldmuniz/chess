@@ -3,15 +3,16 @@ package client;
 import org.junit.jupiter.api.*;
 import server.Server;
 
-
 public class ServerFacadeTests {
 
     private static Server server;
+    private static String BASE_URL;
 
     @BeforeAll
     public static void init() {
         server = new Server();
         var port = server.run(0);
+        BASE_URL = String.format("http://localhost:%d", port);
         System.out.println("Started test HTTP server on " + port);
     }
 
@@ -20,18 +21,10 @@ public class ServerFacadeTests {
         server.stop();
     }
 
-
-    @Test
-    public void sampleTest() {
-        Assertions.assertTrue(true);
-    }
-
     @Test
     public void clearWorks() throws Exception {
-        var facade = new ServerFacade("http://localhost:8080");
+        var facade = new ServerFacade(BASE_URL);
         facade.clear();
-        Assertions.assertTrue(true); // placeholder assertion, just check no crash
+        Assertions.assertTrue(true);
     }
-
-
 }

@@ -27,7 +27,7 @@ public class ServerFacade {
             var status = conn.getResponseCode();
 
             if (status != HttpURLConnection.HTTP_OK) {
-                System.out.println("⚠Clear failed. Status: " + status);
+                System.out.println("Clear failed. Status: " + status);
             } else {
                 System.out.println("Database cleared successfully.");
             }
