@@ -87,4 +87,49 @@ public class DatabaseManager {
         return dbPassword;
     }
 
+    public static void clear() throws DataAccessException {
+        try (var conn = getConnection();
+             var stmt = conn.createStatement()) {
+
+            // drop in reverse order to avoid foreign key issues
+            stmt.executeUpdate("DROP TABLE IF EXISTS auth");
+            stmt.executeUpdate("DROP TABLE IF EXISTS game");
+            stmt.executeUpdate("DROP TABLE IF EXISTS user");
+
+            // then make the tables again so it’s clean
+            stmt.executeUpdate("""
+            CREATE TABLE IF NOT EXISTS user (
+                username VARCHAR(50) PRIMARY KEY,
+                password VARCHAR(255) NOT NULL,
+                email VARCHAR(100) NOT NULL
+            )
+        """);
+
+            stmt.executeUpdate("""
+            CREATE TABLE IF NOT EXISTS auth (
+                authToken VARCHAR(100) PRIMARY KEY,
+                username VARCHAR(50) NOT NULL,
+                FOREIGN KEY (username) REFERENCES user(username)
+            )
+        """);
+
+            stmt.executeUpdate("""
+            CREATE TABLE IF NOT EXISTS game (
+                gameID INT NOT NULL AUTO_INCREMENT,
+                whiteUsername VARCHAR(50),
+                blackUsername VARCHAR(50),
+                gameName VARCHAR(100) NOT NULL,
+                game TEXT NOT NULL,
+                PRIMARY KEY (gameID),
+                FOREIGN KEY (whiteUsername) REFERENCES user(username),
+                FOREIGN KEY (blackUsername) REFERENCES user(username)
+            )
+        """);
+
+        } catch (SQLException e) {
+            throw new DataAccessException("could not clear database: " + e.getMessage(), e);
+        }
+    }
+
+
 }
