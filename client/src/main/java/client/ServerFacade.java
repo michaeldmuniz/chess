@@ -1,5 +1,7 @@
 package client;
 
+import client.dto.LoginRequest;
+import client.dto.LoginResponse;
 import model.*;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -36,7 +38,21 @@ public class ServerFacade {
             throw new IOException("register failed: " + status + " -> " + body);
         }
     }
-    public void login(Object req) throws IOException {}
+    public LoginResponse login(LoginRequest req) throws IOException {
+        var conn = makeConnection("/session", "POST");
+
+        // I need to send JSON, so write the request body out
+        try (var out = conn.getOutputStream()) {
+            var json = gson.toJson(req);
+            out.write(json.getBytes());
+        }
+
+        conn.connect();
+
+        // Still not reading response yet — placeholder for now
+        conn.disconnect();
+        return null;
+    }
     public void logout(String authToken) throws IOException {}
     public void createGame(Object req) throws IOException {}
     public void listGames(String authToken) throws IOException {}
