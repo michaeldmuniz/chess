@@ -1,18 +1,23 @@
 package client;
 
+import client.dto.LoginRequest;
+import client.dto.RegisterRequest;
 import org.junit.jupiter.api.*;
 import server.Server;
+import java.io.IOException;
 import java.util.Map;
 
 public class ServerFacadeTests {
 
     private static Server server;
     private static int port;
+    private static String baseURL;
 
     @BeforeAll
     public static void init() {
         server = new Server();
         port = server.run(0);
+        baseURL = "http://localhost:" + port;
         System.out.println("Started test HTTP server on " + port);
     }
 
@@ -28,14 +33,14 @@ public class ServerFacadeTests {
 
     @Test
     public void clearWorks() throws Exception {
-        var facade = new ServerFacade("http://localhost:" + port);
+        var facade = new ServerFacade(baseURL);
         facade.clear();
         Assertions.assertTrue(true);
     }
 
     @Test
     public void registerSuccess() throws Exception {
-        var facade = new ServerFacade("http://localhost:" + port);
+        var facade = new ServerFacade(baseURL);
 
         facade.clear();
 
@@ -48,5 +53,50 @@ public class ServerFacadeTests {
         Object result = facade.register(req);
 
         Assertions.assertNotNull(result);
+    }
+
+    @Test
+    public void loginSuccess() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        facade.register(new RegisterRequest("john", "pass", "j@x.com"));
+
+        var resp = facade.login(new LoginRequest("john", "pass"));
+
+        Assertions.assertNotNull(resp);
+        Assertions.assertNotNull(resp.authToken());
+        Assertions.assertEquals("john", resp.username());
+    }
+
+    @Test
+    public void loginBadRequest() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.login(new LoginRequest(null, "abc"));
+        });
+
+        Assertions.assertEquals("Error: bad request", ex.getMessage());
+    }
+
+    @Test
+    public void loginUnauthorized() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        // Register real user
+        facade.register(new RegisterRequest("mike", "secret", "m@x.com"));
+
+        // Try wrong password
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.login(new LoginRequest("mike", "wrong"));
+        });
+
+        Assertions.assertEquals("Error: unauthorized", ex.getMessage());
     }
 }

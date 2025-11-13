@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.BufferedInputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class ServerFacade {
     private final String serverUrl;
@@ -42,12 +43,10 @@ public class ServerFacade {
         var conn = makeConnection("/session", "POST");
 
         try (var out = conn.getOutputStream()) {
-            String jsonReq = gson.toJson(req);
-            out.write(jsonReq.getBytes());
+            out.write(gson.toJson(req).getBytes());
         }
 
         conn.connect();
-
         int status = conn.getResponseCode();
 
         String raw;
@@ -57,14 +56,15 @@ public class ServerFacade {
             raw = new String(in.readAllBytes());
         }
 
-        System.out.println("login raw response = " + raw);
-
         if (status == HttpURLConnection.HTTP_OK) {
-
             return gson.fromJson(raw, LoginResponse.class);
         }
-        return null;
+
+        var msg = gson.fromJson(raw, Map.class).get("message").toString();
+
+        throw new IOException(msg);
     }
+
 
 
     public void logout(String authToken) throws IOException {}
