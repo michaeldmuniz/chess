@@ -41,18 +41,32 @@ public class ServerFacade {
     public LoginResponse login(LoginRequest req) throws IOException {
         var conn = makeConnection("/session", "POST");
 
-        // I need to send JSON, so write the request body out
         try (var out = conn.getOutputStream()) {
-            var json = gson.toJson(req);
-            out.write(json.getBytes());
+            String jsonReq = gson.toJson(req);
+            out.write(jsonReq.getBytes());
         }
 
         conn.connect();
 
-        // Still not reading response yet — placeholder for now
-        conn.disconnect();
+        int status = conn.getResponseCode();
+
+        String raw;
+        try (var in = (status == HttpURLConnection.HTTP_OK)
+                ? conn.getInputStream()
+                : conn.getErrorStream()) {
+            raw = new String(in.readAllBytes());
+        }
+
+        System.out.println("login raw response = " + raw);
+
+        if (status == HttpURLConnection.HTTP_OK) {
+
+            return gson.fromJson(raw, LoginResponse.class);
+        }
         return null;
     }
+
+
     public void logout(String authToken) throws IOException {}
     public void createGame(Object req) throws IOException {}
     public void listGames(String authToken) throws IOException {}
