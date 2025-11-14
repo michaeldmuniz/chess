@@ -95,25 +95,36 @@ public class ServerFacade {
     }
 
     public Object createGame(Object req) throws IOException {
-        // starting to wire this up similar to register/login
-
         var conn = makeConnection("/game", "POST");
         conn.addRequestProperty("Content-Type", "application/json");
 
-        // write request body
         try (var out = conn.getOutputStream()) {
             var json = gson.toJson(req);
             out.write(json.getBytes());
         }
 
-        // I'm not handling response yet, just returning null for now
         int status = conn.getResponseCode();
-        if (status != HttpURLConnection.HTTP_OK) {
-            // I'll fill this in later with proper error handling
-            throw new IOException("game creation failed with status " + status);
+
+        if (status == HttpURLConnection.HTTP_OK) {
+            // temporary: just grab JSON map instead of a real DTO
+            try (var in = conn.getInputStream()) {
+                var body = new String(in.readAllBytes());
+                // server sends {"gameID": N} so I'll just treat it as a map for now
+                Map<?,?> result = gson.fromJson(body, Map.class);
+                return result;
+            }
         }
 
-        return null; // will replace once I parse responses
+        // handle error bodies like register/login
+        try (var err = conn.getErrorStream()) {
+            if (err != null) {
+                var body = new String(err.readAllBytes());
+                Map<?,?> error = gson.fromJson(body, Map.class);
+                throw new IOException((String) error.get("message"));
+            }
+        }
+
+        throw new IOException("Error: unexpected failure");
     }
 
     public void listGames(String authToken) throws IOException {}
