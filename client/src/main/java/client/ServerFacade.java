@@ -95,8 +95,19 @@ public class ServerFacade {
     }
 
     public Object createGame(Object req) throws IOException {
+        Map<?,?> map = (Map<?,?>) req;
+
+        String auth = (String) map.get("authToken");
+        String gameName = (String) map.get("gameName");
+
+        if (auth == null || auth.isBlank() || gameName == null || gameName.isBlank()) {
+            throw new IOException("Error: bad request");
+        }
+
         var conn = makeConnection("/game", "POST");
         conn.addRequestProperty("Content-Type", "application/json");
+
+        conn.addRequestProperty("Authorization", auth);
 
         try (var out = conn.getOutputStream()) {
             var json = gson.toJson(req);
@@ -106,16 +117,13 @@ public class ServerFacade {
         int status = conn.getResponseCode();
 
         if (status == HttpURLConnection.HTTP_OK) {
-            // temporary: just grab JSON map instead of a real DTO
             try (var in = conn.getInputStream()) {
                 var body = new String(in.readAllBytes());
-                // server sends {"gameID": N} so I'll just treat it as a map for now
                 Map<?,?> result = gson.fromJson(body, Map.class);
                 return result;
             }
         }
 
-        // handle error bodies like register/login
         try (var err = conn.getErrorStream()) {
             if (err != null) {
                 var body = new String(err.readAllBytes());

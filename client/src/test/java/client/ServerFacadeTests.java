@@ -131,5 +131,46 @@ public class ServerFacadeTests {
         Assertions.assertEquals("Error: unauthorized", ex.getMessage());
     }
 
+    @Test
+    public void createGameSuccess() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        facade.register(new RegisterRequest("amy", "pw", "a@x.com"));
+        var login = facade.login(new LoginRequest("amy", "pw"));
+
+        var req = Map.of(
+                "authToken", login.authToken(),
+                "gameName", "test game"
+        );
+
+        Object result = facade.createGame(req);
+
+        Assertions.assertNotNull(result);
+        Map<?,?> map = (Map<?,?>) result;
+        Assertions.assertTrue(map.containsKey("gameID"));
+    }
+
+    @Test
+    public void createGameBadRequest() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        facade.register(new RegisterRequest("bob", "123", "b@x.com"));
+        var login = facade.login(new LoginRequest("bob", "123"));
+
+        var badReq = Map.of(
+                "authToken", login.authToken()
+        );
+
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.createGame(badReq);
+        });
+
+        Assertions.assertEquals("Error: bad request", ex.getMessage());
+    }
+
 
 }
