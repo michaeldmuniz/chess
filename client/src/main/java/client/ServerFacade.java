@@ -94,7 +94,28 @@ public class ServerFacade {
         }
     }
 
-    public void createGame(Object req) throws IOException {}
+    public Object createGame(Object req) throws IOException {
+        // starting to wire this up similar to register/login
+
+        var conn = makeConnection("/game", "POST");
+        conn.addRequestProperty("Content-Type", "application/json");
+
+        // write request body
+        try (var out = conn.getOutputStream()) {
+            var json = gson.toJson(req);
+            out.write(json.getBytes());
+        }
+
+        // I'm not handling response yet, just returning null for now
+        int status = conn.getResponseCode();
+        if (status != HttpURLConnection.HTTP_OK) {
+            // I'll fill this in later with proper error handling
+            throw new IOException("game creation failed with status " + status);
+        }
+
+        return null; // will replace once I parse responses
+    }
+
     public void listGames(String authToken) throws IOException {}
     public void joinGame(Object req) throws IOException {}
     public void clear() throws IOException {
