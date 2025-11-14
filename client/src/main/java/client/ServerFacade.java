@@ -2,6 +2,7 @@ package client;
 
 import client.dto.LoginRequest;
 import client.dto.LoginResponse;
+import client.dto.LogoutResponse;
 import model.*;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -67,7 +68,32 @@ public class ServerFacade {
 
 
 
-    public void logout(String authToken) throws IOException {}
+    public LogoutResponse logout(String authToken) throws IOException {
+        if (authToken == null || authToken.isBlank()) {
+            throw new IOException("Error: bad request");
+        }
+
+        var conn = makeConnection("/session", "DELETE");
+        conn.addRequestProperty("Authorization", authToken);
+
+        try {
+            conn.connect();
+            int status = conn.getResponseCode();
+
+            if (status == HttpURLConnection.HTTP_OK) {
+                return new LogoutResponse("ok");
+            }
+
+            String body = new String(conn.getErrorStream().readAllBytes());
+            var msg = gson.fromJson(body, Map.class).get("message");
+
+            throw new IOException(msg.toString());
+
+        } finally {
+            conn.disconnect();
+        }
+    }
+
     public void createGame(Object req) throws IOException {}
     public void listGames(String authToken) throws IOException {}
     public void joinGame(Object req) throws IOException {}
