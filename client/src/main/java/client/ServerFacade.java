@@ -3,6 +3,7 @@ package client;
 import client.dto.LoginRequest;
 import client.dto.LoginResponse;
 import client.dto.LogoutResponse;
+import client.dto.ListGamesResponse;
 import model.*;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -15,6 +16,7 @@ import java.io.InputStreamReader;
 import java.io.BufferedInputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 public class ServerFacade {
@@ -135,7 +137,35 @@ public class ServerFacade {
         throw new IOException("Error: unexpected failure");
     }
 
-    public void listGames(String authToken) throws IOException {}
+    public ListGamesResponse listGames(String authToken) throws IOException {
+        var conn = makeConnection("/game", "GET");
+        conn.addRequestProperty("Authorization", authToken);
+
+        int status = conn.getResponseCode();
+
+        if (status == HttpURLConnection.HTTP_OK) {
+            try (var in = conn.getInputStream()) {
+                var body = new String(in.readAllBytes());
+
+                Map<?,?> json = gson.fromJson(body, Map.class);
+
+                List<Map<String, Object>> games =
+                        (List<Map<String, Object>>) json.get("games");
+
+                return new ListGamesResponse(games);
+            }
+        }
+
+        try (var err = conn.getErrorStream()) {
+            if (err != null) {
+                var body = new String(err.readAllBytes());
+                Map<?,?> errJson = gson.fromJson(body, Map.class);
+                throw new IOException((String) errJson.get("message"));
+            }
+        }
+
+        throw new IOException("Error: unexpected failure");
+    }
     public void joinGame(Object req) throws IOException {}
     public void clear() throws IOException {
         var conn = makeConnection("/db", "DELETE");
