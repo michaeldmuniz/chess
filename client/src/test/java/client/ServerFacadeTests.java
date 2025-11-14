@@ -99,4 +99,38 @@ public class ServerFacadeTests {
 
         Assertions.assertEquals("Error: unauthorized", ex.getMessage());
     }
+
+    @Test
+    public void logoutBadRequest() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.logout(null);
+        });
+
+        Assertions.assertEquals("Error: bad request", ex.getMessage());
+    }
+
+    @Test
+    public void logoutUnauthorized() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        // create real user, login so DB has real auth token
+        facade.register(new RegisterRequest("sam", "pass", "s@x.com"));
+        var loginResp = facade.login(new LoginRequest("sam", "pass"));
+
+        // now attempt logout with *totally fake* token
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.logout("not-a-real-token-123");
+        });
+
+        Assertions.assertEquals("Error: unauthorized", ex.getMessage());
+    }
+
+
+
 }
