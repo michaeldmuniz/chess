@@ -231,7 +231,9 @@ public class ServerFacade {
             stream = conn.getErrorStream();
         }
 
-        if (stream == null) return "";
+        if (stream == null) {
+            return "";
+        }
 
         try (var in = new BufferedInputStream(stream);
              var reader = new InputStreamReader(in, StandardCharsets.UTF_8);
