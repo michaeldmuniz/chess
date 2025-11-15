@@ -1,9 +1,6 @@
 package client;
 
-import client.dto.LoginRequest;
-import client.dto.LoginResponse;
-import client.dto.LogoutResponse;
-import client.dto.ListGamesResponse;
+import client.dto.*;
 import model.*;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -165,7 +162,36 @@ public class ServerFacade {
 
         throw new IOException("Error: unexpected failure");
     }
-    public void joinGame(Object req) throws IOException {}
+
+    public JoinGameResponse joinGame(JoinGameRequest req, String authToken) throws IOException {
+        var conn = makeConnection("/game", "PUT");
+        conn.addRequestProperty("Content-Type", "application/json");
+        conn.addRequestProperty("Authorization", authToken);
+
+        try (var out = conn.getOutputStream()) {
+            var json = gson.toJson(req);
+            out.write(json.getBytes());
+        }
+
+        int status = conn.getResponseCode();
+
+        if (status == HttpURLConnection.HTTP_OK) {
+            try (var in = conn.getInputStream()) {
+                return new JoinGameResponse();
+            }
+        }
+
+        try (var err = conn.getErrorStream()) {
+            if (err != null) {
+                var body = new String(err.readAllBytes());
+                var error = gson.fromJson(body, Map.class);
+                throw new IOException((String) error.get("message"));
+            }
+        }
+
+        throw new IOException("Error: unexpected failure");
+    }
+
     public void clear() throws IOException {
         var conn = makeConnection("/db", "DELETE");
         try {
