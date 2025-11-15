@@ -172,5 +172,54 @@ public class ServerFacadeTests {
         Assertions.assertEquals("Error: bad request", ex.getMessage());
     }
 
+    @Test
+    public void listGamesSuccess() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        facade.register(new RegisterRequest("sam", "pass123", "s@x.com"));
+        var loginResp = facade.login(new LoginRequest("sam", "pass123"));
+
+        facade.createGame(Map.of("gameName", "game1"));
+        facade.createGame(Map.of("gameName", "game2"));
+
+        var gamesResp = facade.listGames(loginResp.authToken());
+
+        Assertions.assertNotNull(gamesResp);
+        Assertions.assertNotNull(gamesResp.games());
+        Assertions.assertTrue(gamesResp.games().size() >= 2);
+    }
+
+    @Test
+    public void listGamesUnauthorized() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.listGames("not-a-real-token");
+        });
+
+        Assertions.assertEquals("Error: unauthorized", ex.getMessage());
+    }
+
+    @Test
+    public void listGamesEmptyList() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        facade.register(new RegisterRequest("amy", "pw", "a@x.com"));
+        var loginResp = facade.login(new LoginRequest("amy", "pw"));
+
+        var list = facade.listGames(loginResp.authToken());
+
+        Assertions.assertNotNull(list);
+        Assertions.assertNotNull(list.games());
+        Assertions.assertEquals(0, list.games().size());
+    }
+
+
 
 }
