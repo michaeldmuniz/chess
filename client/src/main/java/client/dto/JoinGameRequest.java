@@ -1,3 +1,3 @@
 package client.dto;
 
-public record JoinGameRequest(Integer gameID, String playerColor) {}
+public record JoinGameRequest(String playerColor, int gameID) {}

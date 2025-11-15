@@ -235,15 +235,21 @@ public class ServerFacadeTests {
 
         facade.clear();
 
-        facade.register(new RegisterRequest("bob", "pw", "b@x.com"));
-        var loginResp = facade.login(new LoginRequest("bob", "pw"));
+        var reg = facade.register(new RegisterRequest("mike", "pass", "m@x.com"));
+        var login = facade.login(new LoginRequest("mike", "pass"));
 
-        var game = facade.createGame(Map.of("gameName", "myGame"));
-        int gameID = ((Double)((Map)game).get("gameID")).intValue();
+        var gameResp = facade.createGame(Map.of(
+                "authToken", login.authToken(),
+                "gameName", "testGame"
+        ));
 
-        var resp = facade.joinGame(new JoinGameRequest(gameID, "WHITE"), loginResp.authToken());
+        int gameID = ((Double)((Map<?,?>)gameResp).get("gameID")).intValue();
 
-        Assertions.assertNotNull(resp);
+        var joinReq = new JoinGameRequest("WHITE", gameID);
+
+        var result = facade.joinGame(joinReq, login.authToken());
+
+        Assertions.assertNotNull(result);
     }
 
     @Test
@@ -256,9 +262,8 @@ public class ServerFacadeTests {
         facade.register(new RegisterRequest("lee", "pw", "l@x.com"));
         var loginResp = facade.login(new LoginRequest("lee", "pw"));
 
-        // invalid request → missing gameID
         Exception ex = Assertions.assertThrows(IOException.class, () -> {
-            facade.joinGame(new JoinGameRequest(null, "WHITE"), loginResp.authToken());
+            facade.joinGame(new JoinGameRequest("WHITE", 0), loginResp.authToken());
         });
 
         Assertions.assertEquals("Error: bad request", ex.getMessage());
@@ -270,11 +275,14 @@ public class ServerFacadeTests {
 
         facade.clear();
 
+        var req = new JoinGameRequest("WHITE", 1);
+
         Exception ex = Assertions.assertThrows(IOException.class, () -> {
-            facade.joinGame(new JoinGameRequest(1, "WHITE"), "not-a-token");
+            facade.joinGame(req, "not-a-token");
         });
 
         Assertions.assertEquals("Error: unauthorized", ex.getMessage());
     }
+
 
 }

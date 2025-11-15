@@ -94,12 +94,13 @@ public class ServerFacade {
     }
 
     public Object createGame(Object req) throws IOException {
-        Map<?,?> map = (Map<?,?>) req;
+        var map = (Map<?, ?>) req;
 
         String auth = (String) map.get("authToken");
         String gameName = (String) map.get("gameName");
 
-        if (auth == null || auth.isBlank() || gameName == null || gameName.isBlank()) {
+        if (auth == null || auth.isBlank() ||
+                gameName == null || gameName.isBlank()) {
             throw new IOException("Error: bad request");
         }
 
@@ -117,15 +118,14 @@ public class ServerFacade {
         if (status == HttpURLConnection.HTTP_OK) {
             try (var in = conn.getInputStream()) {
                 var body = new String(in.readAllBytes());
-                Map<?,?> result = gson.fromJson(body, Map.class);
-                return result;
+                return gson.fromJson(body, Map.class);
             }
         }
 
         try (var err = conn.getErrorStream()) {
             if (err != null) {
                 var body = new String(err.readAllBytes());
-                Map<?,?> error = gson.fromJson(body, Map.class);
+                Map<?, ?> error = gson.fromJson(body, Map.class);
                 throw new IOException((String) error.get("message"));
             }
         }
