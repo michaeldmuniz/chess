@@ -1,7 +1,12 @@
 package client.ui;
 
 import client.ServerFacade;
+import client.dto.RegisterRequest;
+import client.dto.RegisterResponse;
+import client.dto.LoginRequest;
+import client.dto.LoginResponse;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 public class PreloginUI {
@@ -56,36 +61,45 @@ public class PreloginUI {
                 """);
     }
 
-    /**
-     * Placeholder
-     * No ServerFacade call yet.
-     */
     private void handleRegister(String[] parts) {
         if (parts.length != 4) {
             System.out.println("Usage: register <USERNAME> <PASSWORD> <EMAIL>");
             return;
         }
 
-        // Temporary placeholder
-        String user = parts[1];
-        String pass = parts[2];
+        String username = parts[1];
+        String password = parts[2];
         String email = parts[3];
 
-        System.out.println("(pretend register) user=" + user + " email=" + email);
-    }
+        try {
+            RegisterRequest req = new RegisterRequest(username, password, email);
+            RegisterResponse res = server.register(req);
 
-    /**
-     * Placeholder
-     * No ServerFacade call yet.
-     */
+            System.out.println("Registered successfully! AuthToken: " + res.authToken);
+
+        } catch (IOException ex) {
+            System.out.println("Error: " + ex.getMessage());
+        }
+    }
+    
     private void handleLogin(String[] parts) {
         if (parts.length != 3) {
             System.out.println("Usage: login <USERNAME> <PASSWORD>");
             return;
         }
 
-        // Temporary placeholder (will integrate ServerFacade)
-        String user = parts[1];
-        System.out.println("(pretend login) user=" + user);
+        String username = parts[1];
+        String password = parts[2];
+
+        try {
+            LoginRequest req = new LoginRequest(username, password);
+            LoginResponse res = server.login(req);
+
+            // Still not switching to Postlogin UI
+            System.out.println("Logged in successfully! AuthToken: " + res.authToken());
+
+        } catch (IOException ex) {
+            System.out.println("Error: " + ex.getMessage());
+        }
     }
 }
