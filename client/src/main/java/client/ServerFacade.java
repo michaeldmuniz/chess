@@ -134,13 +134,7 @@ public class ServerFacade {
         }
 
         // If not OK, read the error message and throw it as an exception
-        try (var err = conn.getErrorStream()) {
-            if (err != null) {
-                var body = new String(err.readAllBytes());
-                var error = gson.fromJson(body, Map.class);
-                throw new IOException(error.get("message").toString());
-            }
-        }
+        throwErrorFromConnection(conn);
 
         // Should never happen but catches unexpected cases
         throw new IOException("Error: unexpected failure");
