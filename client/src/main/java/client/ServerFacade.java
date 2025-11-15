@@ -24,17 +24,19 @@ public class ServerFacade {
         this.serverUrl = serverUrl;
     }
 
-    public Object register(Object req) throws IOException {
+    public RegisterResponse register(RegisterRequest req) throws IOException {
         var conn = makeConnection("/user", "POST");
         conn.setRequestProperty("Content-Type", "application/json");
 
+        // Sends the RegisterRequest DTO as JSON
         writeJsonBody(conn, req);
 
         var status = conn.getResponseCode();
         var body = readBody(conn);
 
         if (status >= 200 && status < 300) {
-            return gson.fromJson(body, Object.class);
+            // Converts the JSON response from the server into a RegisterResponse DTO
+            return gson.fromJson(body, RegisterResponse.class);
         } else {
             throw new IOException("register failed: " + status + " -> " + body);
         }
@@ -49,6 +51,8 @@ public class ServerFacade {
         conn.connect();
         int status = conn.getResponseCode();
 
+        // Read whatever the server sent back. If the status was OK, read the normal stream;
+        // otherwise read the error stream. Turn the bytes into a string.
         String raw;
         try (var in = (status == HttpURLConnection.HTTP_OK)
                 ? conn.getInputStream()
@@ -93,70 +97,79 @@ public class ServerFacade {
         }
     }
 
-    public Object createGame(Object req) throws IOException {
-        var map = (Map<?, ?>) req;
+    public CreateGameResponse createGame(CreateGameRequest req) throws IOException {
 
-        String auth = (String) map.get("authToken");
-        String gameName = (String) map.get("gameName");
+        // Pull out the auth token and game name from the DTO
+        String auth = req.authToken();
+        String gameName = req.gameName();
 
+        // Make sure both values exist and aren't empty
         if (auth == null || auth.isBlank() ||
                 gameName == null || gameName.isBlank()) {
             throw new IOException("Error: bad request");
         }
 
+        // Make a POST request to /game
         var conn = makeConnection("/game", "POST");
+
+        // Tell the server we are sending JSON and include the auth token
         conn.addRequestProperty("Content-Type", "application/json");
         conn.addRequestProperty("Authorization", auth);
 
+        // Send the gameName in the request body as JSON
         try (var out = conn.getOutputStream()) {
             var json = gson.toJson(Map.of("gameName", gameName));
             out.write(json.getBytes());
         }
 
+        // Ask the server for the status code after sending the request
         int status = conn.getResponseCode();
 
+        // If the server says OK (200), read its response and turn it into a DTO
         if (status == HttpURLConnection.HTTP_OK) {
             try (var in = conn.getInputStream()) {
                 var body = new String(in.readAllBytes());
-                return gson.fromJson(body, Map.class);
+                return gson.fromJson(body, CreateGameResponse.class);
             }
         }
 
+        // If not OK, read the error message and throw it as an exception
         try (var err = conn.getErrorStream()) {
             if (err != null) {
                 var body = new String(err.readAllBytes());
-                Map<?, ?> error = gson.fromJson(body, Map.class);
-                throw new IOException((String) error.get("message"));
+                var error = gson.fromJson(body, Map.class);
+                throw new IOException(error.get("message").toString());
             }
         }
 
+        // Should never happen but catches unexpected cases
         throw new IOException("Error: unexpected failure");
     }
 
-    public ListGamesResponse listGames(String authToken) throws IOException {
+    public ListGamesResponse listGames(ListGamesRequest req) throws IOException {
+        // Pull out the authToken from the DTO
+        String authToken = req.authToken();
+
+        // Make GET /game call
         var conn = makeConnection("/game", "GET");
         conn.addRequestProperty("Authorization", authToken);
 
         int status = conn.getResponseCode();
 
+        // Success: parse the JSON response directly into ListGamesResponse
         if (status == HttpURLConnection.HTTP_OK) {
             try (var in = conn.getInputStream()) {
                 var body = new String(in.readAllBytes());
-
-                Map<?,?> json = gson.fromJson(body, Map.class);
-
-                List<Map<String, Object>> games =
-                        (List<Map<String, Object>>) json.get("games");
-
-                return new ListGamesResponse(games);
+                return gson.fromJson(body, ListGamesResponse.class);
             }
         }
 
+        // Error case: read the message and throw it
         try (var err = conn.getErrorStream()) {
             if (err != null) {
                 var body = new String(err.readAllBytes());
-                Map<?,?> errJson = gson.fromJson(body, Map.class);
-                throw new IOException((String) errJson.get("message"));
+                var error = gson.fromJson(body, Map.class);
+                throw new IOException(error.get("message").toString());
             }
         }
 
@@ -164,28 +177,37 @@ public class ServerFacade {
     }
 
     public JoinGameResponse joinGame(JoinGameRequest req, String authToken) throws IOException {
+
+        // Make sure auth token was provided
+        if (authToken == null || authToken.isBlank()) {
+            throw new IOException("Error: bad request");
+        }
+
+        // Open PUT /game connection
         var conn = makeConnection("/game", "PUT");
         conn.addRequestProperty("Content-Type", "application/json");
         conn.addRequestProperty("Authorization", authToken);
 
+        // Write the JoinGameRequest as JSON
         try (var out = conn.getOutputStream()) {
             var json = gson.toJson(req);
             out.write(json.getBytes());
         }
 
+        // Send request and get the status
         int status = conn.getResponseCode();
 
+        // If success, return an empty JoinGameResponse DTO
         if (status == HttpURLConnection.HTTP_OK) {
-            try (var in = conn.getInputStream()) {
-                return new JoinGameResponse();
-            }
+            return new JoinGameResponse();
         }
 
+        // If failure, read the error message and throw it
         try (var err = conn.getErrorStream()) {
             if (err != null) {
                 var body = new String(err.readAllBytes());
                 var error = gson.fromJson(body, Map.class);
-                throw new IOException((String) error.get("message"));
+                throw new IOException(error.get("message").toString());
             }
         }
 

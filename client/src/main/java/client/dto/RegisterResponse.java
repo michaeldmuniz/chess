@@ -1,7 +1,7 @@
 package client.dto;
 
 
-public class RegisterResult {
+public class RegisterResponse {
     public String username;
     public String authToken;
 
