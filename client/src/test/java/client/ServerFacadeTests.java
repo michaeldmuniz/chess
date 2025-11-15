@@ -181,8 +181,16 @@ public class ServerFacadeTests {
         facade.register(new RegisterRequest("sam", "pass123", "s@x.com"));
         var loginResp = facade.login(new LoginRequest("sam", "pass123"));
 
-        facade.createGame(Map.of("gameName", "game1"));
-        facade.createGame(Map.of("gameName", "game2"));
+        // FIXED: include authToken for createGame
+        facade.createGame(Map.of(
+                "authToken", loginResp.authToken(),
+                "gameName", "game1"
+        ));
+
+        facade.createGame(Map.of(
+                "authToken", loginResp.authToken(),
+                "gameName", "game2"
+        ));
 
         var gamesResp = facade.listGames(loginResp.authToken());
 

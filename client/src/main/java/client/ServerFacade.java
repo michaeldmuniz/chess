@@ -108,11 +108,10 @@ public class ServerFacade {
 
         var conn = makeConnection("/game", "POST");
         conn.addRequestProperty("Content-Type", "application/json");
-
         conn.addRequestProperty("Authorization", auth);
 
         try (var out = conn.getOutputStream()) {
-            var json = gson.toJson(req);
+            var json = gson.toJson(Map.of("gameName", gameName));
             out.write(json.getBytes());
         }
 
