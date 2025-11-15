@@ -1,5 +1,6 @@
 package client;
 
+import client.dto.JoinGameRequest;
 import client.dto.LoginRequest;
 import client.dto.RegisterRequest;
 import org.junit.jupiter.api.*;
@@ -228,6 +229,52 @@ public class ServerFacadeTests {
         Assertions.assertEquals(0, list.games().size());
     }
 
+    @Test
+    public void joinGameSuccess() throws Exception {
+        var facade = new ServerFacade(baseURL);
 
+        facade.clear();
+
+        facade.register(new RegisterRequest("bob", "pw", "b@x.com"));
+        var loginResp = facade.login(new LoginRequest("bob", "pw"));
+
+        var game = facade.createGame(Map.of("gameName", "myGame"));
+        int gameID = ((Double)((Map)game).get("gameID")).intValue();
+
+        var resp = facade.joinGame(new JoinGameRequest(gameID, "WHITE"), loginResp.authToken());
+
+        Assertions.assertNotNull(resp);
+    }
+
+    @Test
+    public void joinGameBadRequest() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        // register + login
+        facade.register(new RegisterRequest("lee", "pw", "l@x.com"));
+        var loginResp = facade.login(new LoginRequest("lee", "pw"));
+
+        // invalid request → missing gameID
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.joinGame(new JoinGameRequest(null, "WHITE"), loginResp.authToken());
+        });
+
+        Assertions.assertEquals("Error: bad request", ex.getMessage());
+    }
+
+    @Test
+    public void joinGameUnauthorized() throws Exception {
+        var facade = new ServerFacade(baseURL);
+
+        facade.clear();
+
+        Exception ex = Assertions.assertThrows(IOException.class, () -> {
+            facade.joinGame(new JoinGameRequest(1, "WHITE"), "not-a-token");
+        });
+
+        Assertions.assertEquals("Error: unauthorized", ex.getMessage());
+    }
 
 }
