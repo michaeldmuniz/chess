@@ -165,13 +165,7 @@ public class ServerFacade {
         }
 
         // Error case: read the message and throw it
-        try (var err = conn.getErrorStream()) {
-            if (err != null) {
-                var body = new String(err.readAllBytes());
-                var error = gson.fromJson(body, Map.class);
-                throw new IOException(error.get("message").toString());
-            }
-        }
+        throwErrorFromConnection(conn);
 
         throw new IOException("Error: unexpected failure");
     }
@@ -203,13 +197,7 @@ public class ServerFacade {
         }
 
         // If failure, read the error message and throw it
-        try (var err = conn.getErrorStream()) {
-            if (err != null) {
-                var body = new String(err.readAllBytes());
-                var error = gson.fromJson(body, Map.class);
-                throw new IOException(error.get("message").toString());
-            }
-        }
+        throwErrorFromConnection(conn);
 
         throw new IOException("Error: unexpected failure");
     }
@@ -274,4 +262,15 @@ public class ServerFacade {
         conn.addRequestProperty("Accept", "application/json");
         return conn;
     }
+
+    private void throwErrorFromConnection(HttpURLConnection conn) throws IOException {
+        try (var err = conn.getErrorStream()) {
+            if (err != null) {
+                var body = new String(err.readAllBytes());
+                var error = gson.fromJson(body, Map.class);
+                throw new IOException(error.get("message").toString());
+            }
+        }
+    }
+
 }
