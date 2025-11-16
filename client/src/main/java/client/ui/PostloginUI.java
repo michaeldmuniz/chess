@@ -1,5 +1,6 @@
 package client.ui;
 
+
 import client.ServerFacade;
 import client.dto.CreateGameRequest;
 import client.dto.ListGamesRequest;
@@ -14,6 +15,7 @@ public class PostloginUI {
 
     private final ServerFacade server;
     private final Scanner scanner;
+    private List<GameData> lastListedGames = List.of();
 
     public PostloginUI(ServerFacade server, Scanner scanner) {
         this.server = server;
@@ -76,6 +78,7 @@ public class PostloginUI {
             ListGamesResponse res = server.listGames(req);
 
             List<GameData> games = res.games();
+            this.lastListedGames = games;
 
             if (games == null || games.isEmpty()) {
                 System.out.println("No games found.");
@@ -119,6 +122,7 @@ public class PostloginUI {
         } catch (Exception ex) {
             System.out.println("Error: " + ex.getMessage());
         }
+
     }
 
 
@@ -132,4 +136,9 @@ public class PostloginUI {
         """);
 
     }
+
+    public List<GameData> getLastListedGames() {
+        return lastListedGames;
+    }
+
 }
