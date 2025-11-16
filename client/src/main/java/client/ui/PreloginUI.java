@@ -18,13 +18,15 @@ public class PreloginUI {
         this.server = server;
         this.scanner = scanner;
     }
+    
+    public PreloginResult runOnce() {
+        PreloginResult result = new PreloginResult();
 
-    public boolean runOnce() {
         System.out.print("[LOGGED_OUT] >>> ");
         String line = scanner.nextLine().trim();
 
         if (line.isEmpty()) {
-            return false;
+            return result;
         }
 
         String[] parts = line.split("\\s+");
@@ -33,35 +35,27 @@ public class PreloginUI {
         switch (cmd) {
             case "help":
                 printHelp();
-                return false;
+                return result;
 
             case "quit":
-                return true;
+                result.quit = true;
+                return result;
 
             case "register":
-                handleRegister(parts);
-                return false;
+                handleRegister(parts, result);
+                return result;
 
             case "login":
-                handleLogin(parts);
-                return false;
+                handleLogin(parts, result);
+                return result;
 
             default:
                 System.out.println("Unknown command. Type 'help'.");
-                return false;
+                return result;
         }
     }
 
-    private void printHelp() {
-        System.out.println("""
-                register <USERNAME> <PASSWORD> <EMAIL> - to create an account
-                login <USERNAME> <PASSWORD>            - to play chess
-                quit                                   - exit the program
-                help                                   - show possible commands
-                """);
-    }
-
-    private void handleRegister(String[] parts) {
+    private void handleRegister(String[] parts, PreloginResult out) {
         if (parts.length != 4) {
             System.out.println("Usage: register <USERNAME> <PASSWORD> <EMAIL>");
             return;
@@ -75,14 +69,16 @@ public class PreloginUI {
             RegisterRequest req = new RegisterRequest(username, password, email);
             RegisterResponse res = server.register(req);
 
-            System.out.println("Registered successfully! AuthToken: " + res.authToken);
+            System.out.println("Registered successfully!");
+            out.loggedIn = true;
+            out.authToken = res.authToken;
 
         } catch (IOException ex) {
             System.out.println("Error: " + ex.getMessage());
         }
     }
-    
-    private void handleLogin(String[] parts) {
+
+    private void handleLogin(String[] parts, PreloginResult out) {
         if (parts.length != 3) {
             System.out.println("Usage: login <USERNAME> <PASSWORD>");
             return;
@@ -95,11 +91,21 @@ public class PreloginUI {
             LoginRequest req = new LoginRequest(username, password);
             LoginResponse res = server.login(req);
 
-            // Still not switching to Postlogin UI
-            System.out.println("Logged in successfully! AuthToken: " + res.authToken());
+            System.out.println("Logged in successfully!");
+            out.loggedIn = true;
+            out.authToken = res.authToken();
 
         } catch (IOException ex) {
             System.out.println("Error: " + ex.getMessage());
         }
+    }
+
+    private void printHelp() {
+        System.out.println("""
+                register <USERNAME> <PASSWORD> <EMAIL> - to create an account
+                login <USERNAME> <PASSWORD>            - to play chess
+                quit                                   - exit the program
+                help                                   - show possible commands
+                """);
     }
 }
