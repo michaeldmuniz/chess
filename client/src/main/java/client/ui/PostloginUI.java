@@ -1,6 +1,7 @@
 package client.ui;
 
 import client.ServerFacade;
+import client.dto.CreateGameRequest;
 import client.dto.ListGamesRequest;
 import client.dto.ListGamesResponse;
 import model.GameData;
@@ -43,6 +44,10 @@ public class PostloginUI {
 
             case "list":
                 handleListGames(authToken);
+                return result;
+
+            case "create":
+                handleCreate(authToken);
                 return result;
 
             case "quit":
@@ -98,12 +103,33 @@ public class PostloginUI {
         }
     }
 
+    private void handleCreate(String authToken) {
+        System.out.print("Enter game name: ");
+        String name = scanner.nextLine().trim();
+
+        if (name.isEmpty()) {
+            System.out.println("Game name cannot be empty.");
+            return;
+        }
+
+        try {
+            var req = new CreateGameRequest(name, authToken);
+            var resp = server.createGame(req);
+            System.out.println("Created game with ID: " + resp.gameID());
+        } catch (Exception ex) {
+            System.out.println("Error: " + ex.getMessage());
+        }
+    }
+
+
     private void printHelp() {
         System.out.println("""
-                help      - show commands
-                list      - list all games
-                logout    - log out
-                quit      - exit program
-                """);
+        help      - show commands
+        list      - list all games
+        create    - create a new game
+        logout    - log out
+        quit      - exit program
+        """);
+
     }
 }
