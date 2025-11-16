@@ -1,6 +1,6 @@
 package client.dto;
 
+import model.GameData;
 import java.util.List;
-import java.util.Map;
 
-public record ListGamesResponse(List<Map<String, Object>> games) {}
+public record ListGamesResponse(List<GameData> games) { }

@@ -1,7 +1,12 @@
 package client.ui;
 
 import client.ServerFacade;
+import client.dto.ListGamesRequest;
+import client.dto.ListGamesResponse;
+import model.GameData;
+
 import java.io.IOException;
+import java.util.List;
 import java.util.Scanner;
 
 public class PostloginUI {
@@ -36,6 +41,10 @@ public class PostloginUI {
                 handleLogout(authToken, result);
                 return result;
 
+            case "list":
+                handleListGames(authToken);
+                return result;
+
             case "quit":
                 result.quit = true;
                 return result;
@@ -56,11 +65,45 @@ public class PostloginUI {
         }
     }
 
+    private void handleListGames(String authToken) {
+        try {
+            ListGamesRequest req = new ListGamesRequest(authToken);
+            ListGamesResponse res = server.listGames(req);
+
+            List<GameData> games = res.games();
+
+            if (games == null || games.isEmpty()) {
+                System.out.println("No games found.");
+                return;
+            }
+
+            int num = 1;
+            for (GameData g : games) {
+
+                String white = (g.whiteUsername() == null)
+                        ? "-" : g.whiteUsername();
+
+                String black = (g.blackUsername() == null)
+                        ? "-" : g.blackUsername();
+
+                System.out.println(num + ". \"" + g.gameName() +
+                        "\"   white=" + white +
+                        "   black=" + black);
+
+                num++;
+            }
+
+        } catch (IOException ex) {
+            System.out.println("Error: " + ex.getMessage());
+        }
+    }
+
     private void printHelp() {
         System.out.println("""
-                help    - show commands
-                logout  - log out
-                quit    - exit program
+                help      - show commands
+                list      - list all games
+                logout    - log out
+                quit      - exit program
                 """);
     }
 }

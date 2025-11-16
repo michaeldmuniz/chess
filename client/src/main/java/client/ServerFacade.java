@@ -141,16 +141,12 @@ public class ServerFacade {
     }
 
     public ListGamesResponse listGames(ListGamesRequest req) throws IOException {
-        // Pull out the authToken from the DTO
-        String authToken = req.authToken();
-
         // Make GET /game call
         var conn = makeConnection("/game", "GET");
-        conn.addRequestProperty("Authorization", authToken);
+        conn.addRequestProperty("Authorization", req.authToken());
 
         int status = conn.getResponseCode();
 
-        // Success: parse the JSON response directly into ListGamesResponse
         if (status == HttpURLConnection.HTTP_OK) {
             try (var in = conn.getInputStream()) {
                 var body = new String(in.readAllBytes());
@@ -158,10 +154,9 @@ public class ServerFacade {
             }
         }
 
-        // Error case: read the message and throw it
+        // Errors
         throwErrorFromConnection(conn);
-
-        throw new IOException("Error: unexpected failure");
+        throw new IOException("Unexpected error");
     }
 
     public JoinGameResponse joinGame(JoinGameRequest req, String authToken) throws IOException {
