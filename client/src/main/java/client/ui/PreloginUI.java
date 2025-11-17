@@ -18,7 +18,7 @@ public class PreloginUI {
         this.server = server;
         this.scanner = scanner;
     }
-    
+
     public PreloginResult runOnce() {
         PreloginResult result = new PreloginResult();
 
@@ -69,7 +69,7 @@ public class PreloginUI {
             RegisterRequest req = new RegisterRequest(username, password, email);
             RegisterResponse res = server.register(req);
 
-            System.out.println("Registered successfully!");
+            System.out.println("Registered successfully! Type help to continue");
             out.loggedIn = true;
             out.authToken = res.authToken;
 
@@ -91,7 +91,7 @@ public class PreloginUI {
             LoginRequest req = new LoginRequest(username, password);
             LoginResponse res = server.login(req);
 
-            System.out.println("Logged in successfully!");
+            System.out.println("Logged in successfully! Type help to continue");
             out.loggedIn = true;
             out.authToken = res.authToken();
 

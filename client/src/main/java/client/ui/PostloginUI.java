@@ -3,6 +3,7 @@ package client.ui;
 
 import client.ServerFacade;
 import client.dto.CreateGameRequest;
+import client.dto.JoinGameRequest;
 import client.dto.ListGamesRequest;
 import client.dto.ListGamesResponse;
 import model.GameData;
@@ -167,12 +168,25 @@ public class PostloginUI {
             return;
         }
 
-        // For now just confirm parsed data 
+        // For now just confirm parsed data
         System.out.println("Parsed play request:");
         System.out.println("  Game #" + index + " -> ID " + game.gameID());
         System.out.println("  Color: " + colorInput);
 
-        // Next I will add ability to join the game.
+        // Build request to join the game
+        var joinReq = new JoinGameRequest(colorInput, game.gameID());
+
+        try {
+            server.joinGame(joinReq, authToken);
+            System.out.println("Successfully joined game " + game.gameID() + " as " + colorInput + ".");
+
+            // Draw initial board (white perspective only for now)
+            var printer = new BoardPrinter();
+            printer.drawBoard(game.game());
+
+        } catch (IOException ex) {
+            System.out.println("Join game failed: " + ex.getMessage());
+        }
     }
 
     private void printHelp() {
