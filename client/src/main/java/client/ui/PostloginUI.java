@@ -58,6 +58,10 @@ public class PostloginUI {
                 handlePlay(parts, authToken, result);
                 return result;
 
+            case "observe":
+                handleObserve(parts, authToken);
+                return result;
+
             case "quit":
                 result.quit = true;
                 return result;
@@ -124,7 +128,7 @@ public class PostloginUI {
         try {
             var req = new CreateGameRequest(name, authToken);
             var resp = server.createGame(req);
-            System.out.println("Created game with ID: " + resp.gameID());
+            System.out.println("Successfully created game: " + name);
         } catch (Exception ex) {
             System.out.println("Error: " + ex.getMessage());
         }
@@ -132,7 +136,6 @@ public class PostloginUI {
     }
 
     private void handlePlay(String[] parts, String authToken, PostloginResult out) {
-        // Must have: play <GAME_NUMBER> <WHITE|BLACK>
         if (parts.length < 3) {
             System.out.println("Usage: play <GAME_NUMBER> <WHITE|BLACK>");
             return;
@@ -169,9 +172,7 @@ public class PostloginUI {
             return;
         }
 
-        // ---- MINIMAL RE-ENTER PATCH ADDED HERE ----
 
-        // If user already occupies this color, skip join and just enter the game
         if (colorInput.equals("WHITE")
                 && game.whiteUsername() != null
                 && game.whiteUsername().equals(currentUsername)) {
@@ -204,9 +205,7 @@ public class PostloginUI {
             return;
         }
 
-        // ---- END OF PATCH ----
 
-        // Normal join flow
         System.out.println("Parsed play request:");
         System.out.println("  Game #" + index + " -> ID " + game.gameID());
         System.out.println("  Color: " + colorInput);
@@ -237,6 +236,7 @@ public class PostloginUI {
         list      - list all games
         create    - create a new game
         play      - join a game as white or black
+        observe   - observe a game
         logout    - log out
         quit      - exit program
         """);
@@ -245,5 +245,44 @@ public class PostloginUI {
     public List<GameData> getLastListedGames() {
         return lastListedGames;
     }
+
+    private void handleObserve(String[] parts, String authToken) {
+
+        // Usage: observe <GAME_NUMBER>
+        if (parts.length < 2) {
+            System.out.println("Usage: observe <GAME_NUMBER>");
+            return;
+        }
+
+        // Parse game number
+        int index;
+        try {
+            index = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException ex) {
+            System.out.println("Game number must be an integer.");
+            return;
+        }
+
+        // Must have run list first
+        if (lastListedGames == null || lastListedGames.isEmpty()) {
+            System.out.println("No games loaded. Run 'list' first.");
+            return;
+        }
+
+        if (index < 1 || index > lastListedGames.size()) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+
+        // Retrieve game
+        var game = lastListedGames.get(index - 1);
+
+        System.out.println("Observing game \"" + game.gameName() + "\"");
+
+        // Draw board *from white perspective* (Phase 5 rules)
+        var printer = new BoardPrinter();
+        printer.drawBoard(game.game(), true);
+    }
+
 
 }

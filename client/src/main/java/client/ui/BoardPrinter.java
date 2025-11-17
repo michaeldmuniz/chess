@@ -10,7 +10,7 @@ public class BoardPrinter {
 
     private static final String RESET = "\u001B[0m";
 
-    private static final String LIGHT_BG = "\u001B[48;5;223m";   // Beige
+    private static final String LIGHT_BG = "\u001B[48;5;180m";   // medium beige
     private static final String DARK_BG  = "\u001B[48;5;130m";   // Brown
 
     private static final String WHITE_FG = "\u001B[97m";   // bright white text
@@ -27,27 +27,42 @@ public class BoardPrinter {
         int endCol   = whitePerspective ? 8 : 1;
         int stepCol  = whitePerspective ? 1 : -1;
 
+        if (whitePerspective) {
+            System.out.println("    a  b  c  d  e  f  g  h");
+        } else {
+            System.out.println("    h  g  f  e  d  c  b  a");
+        }
+
+        System.out.println("  +------------------------+");
+
         for (int row = startRow; row != endRow + stepRow; row += stepRow) {
-            System.out.print(row + " ");
+
+            System.out.print(row + " |");
 
             for (int col = startCol; col != endCol + stepCol; col += stepCol) {
-                boolean isLight = (row + col) % 2 == 0;
+
+                boolean isLight = ((row + col) % 2 != 0);
                 String bg = isLight ? LIGHT_BG : DARK_BG;
 
                 ChessPiece piece = board.getPiece(new ChessPosition(row, col));
-                String cell = piece != null ? pieceToChar(piece) : " ";
 
-                System.out.print(bg + cell + " " + RESET);
+                String pieceText = (piece != null ? pieceToChar(piece) : " ");
+
+                String cell = " " + pieceText + " ";
+
+                System.out.print(bg + cell + RESET);
+
             }
 
-            System.out.println();
+            System.out.println("| " + row);
         }
 
-        // Now the column labels also depend on orientation:
+        System.out.println("  +------------------------+");
+
         if (whitePerspective) {
-            System.out.println("  a b c d e f g h");
+            System.out.println("    a  b  c  d  e  f  g  h");
         } else {
-            System.out.println("  h g f e d c b a");
+            System.out.println("    h  g  f  e  d  c  b  a");
         }
     }
 
@@ -64,9 +79,9 @@ public class BoardPrinter {
 
 
         if (p.getTeamColor() == ChessGame.TeamColor.WHITE) {
-            return WHITE_FG + c + RESET;
+            return WHITE_FG + c;
         } else {
-            return BLACK_FG + Character.toLowerCase(c) + RESET;
+            return BLACK_FG + Character.toLowerCase(c);
         }
     }
 }
