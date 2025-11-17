@@ -52,6 +52,10 @@ public class PostloginUI {
                 handleCreate(authToken);
                 return result;
 
+            case "play":
+                handlePlay(parts, authToken, result);
+                return result;
+
             case "quit":
                 result.quit = true;
                 return result;
@@ -125,12 +129,58 @@ public class PostloginUI {
 
     }
 
+    private void handlePlay(String[] parts, String authToken, PostloginResult out) {
+        // Must have: play <GAME_NUMBER> <WHITE|BLACK>
+        if (parts.length < 3) {
+            System.out.println("Usage: play <GAME_NUMBER> <WHITE|BLACK>");
+            return;
+        }
+
+        // Parse GAME_NUMBER
+        int index;
+        try {
+            index = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException ex) {
+            System.out.println("Game number must be an integer.");
+            return;
+        }
+
+        // Validate that listGames was run at least once
+        if (lastListedGames == null || lastListedGames.isEmpty()) {
+            System.out.println("No games loaded. Run 'list' first.");
+            return;
+        }
+
+        // Validate range
+        if (index < 1 || index > lastListedGames.size()) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+
+        // Now retrieve the GameData
+        var game = lastListedGames.get(index - 1);
+
+        // Validate the color
+        String colorInput = parts[2].toUpperCase();
+        if (!colorInput.equals("WHITE") && !colorInput.equals("BLACK")) {
+            System.out.println("Color must be WHITE or BLACK.");
+            return;
+        }
+
+        // For now just confirm parsed data 
+        System.out.println("Parsed play request:");
+        System.out.println("  Game #" + index + " -> ID " + game.gameID());
+        System.out.println("  Color: " + colorInput);
+
+        // Next I will add ability to join the game.
+    }
 
     private void printHelp() {
         System.out.println("""
         help      - show commands
         list      - list all games
         create    - create a new game
+        play      - join a game as white or black
         logout    - log out
         quit      - exit program
         """);
