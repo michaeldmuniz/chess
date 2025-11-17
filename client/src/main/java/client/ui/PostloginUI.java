@@ -1,6 +1,5 @@
 package client.ui;
 
-
 import client.ServerFacade;
 import client.dto.CreateGameRequest;
 import client.dto.JoinGameRequest;
@@ -16,11 +15,13 @@ public class PostloginUI {
 
     private final ServerFacade server;
     private final Scanner scanner;
+    private final String currentUsername;   // ★ Added
     private List<GameData> lastListedGames = List.of();
 
-    public PostloginUI(ServerFacade server, Scanner scanner) {
+    public PostloginUI(ServerFacade server, Scanner scanner, String currentUsername) {
         this.server = server;
         this.scanner = scanner;
+        this.currentUsername = currentUsername;   // ★ Store logged-in username
     }
 
     public PostloginResult runOnce(String authToken) {
@@ -158,31 +159,72 @@ public class PostloginUI {
             return;
         }
 
-        // Now retrieve the GameData
+        // Retrieve GameData
         var game = lastListedGames.get(index - 1);
 
-        // Validate the color
+        // Validate color
         String colorInput = parts[2].toUpperCase();
         if (!colorInput.equals("WHITE") && !colorInput.equals("BLACK")) {
             System.out.println("Color must be WHITE or BLACK.");
             return;
         }
 
-        // For now just confirm parsed data
+        // ---- MINIMAL RE-ENTER PATCH ADDED HERE ----
+
+        // If user already occupies this color, skip join and just enter the game
+        if (colorInput.equals("WHITE")
+                && game.whiteUsername() != null
+                && game.whiteUsername().equals(currentUsername)) {
+
+            System.out.println("Re-entering game as WHITE...");
+            boolean whitePerspective = true;
+
+            var printer = new BoardPrinter();
+            printer.drawBoard(game.game(), whitePerspective);
+
+            out.enteredGame = true;
+            out.joinedGame = game;
+            out.joinColor = colorInput;
+            return;
+        }
+
+        if (colorInput.equals("BLACK")
+                && game.blackUsername() != null
+                && game.blackUsername().equals(currentUsername)) {
+
+            System.out.println("Re-entering game as BLACK...");
+            boolean whitePerspective = false;
+
+            var printer = new BoardPrinter();
+            printer.drawBoard(game.game(), whitePerspective);
+
+            out.enteredGame = true;
+            out.joinedGame = game;
+            out.joinColor = colorInput;
+            return;
+        }
+
+        // ---- END OF PATCH ----
+
+        // Normal join flow
         System.out.println("Parsed play request:");
         System.out.println("  Game #" + index + " -> ID " + game.gameID());
         System.out.println("  Color: " + colorInput);
 
-        // Build request to join the game
         var joinReq = new JoinGameRequest(colorInput, game.gameID());
 
         try {
             server.joinGame(joinReq, authToken);
-            System.out.println("Successfully joined game " + game.gameID() + " as " + colorInput + ".");
 
-            // Draw initial board (white perspective only for now)
+            System.out.println("Successfully joined game " + game.gameID() + " as " + colorInput + ".");
+            boolean whitePerspective = colorInput.equals("WHITE");
+
             var printer = new BoardPrinter();
-            printer.drawBoard(game.game());
+            printer.drawBoard(game.game(), whitePerspective);
+
+            out.enteredGame = true;
+            out.joinedGame = game;
+            out.joinColor = colorInput;
 
         } catch (IOException ex) {
             System.out.println("Join game failed: " + ex.getMessage());
@@ -198,7 +240,6 @@ public class PostloginUI {
         logout    - log out
         quit      - exit program
         """);
-
     }
 
     public List<GameData> getLastListedGames() {

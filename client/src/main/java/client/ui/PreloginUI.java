@@ -72,6 +72,7 @@ public class PreloginUI {
             System.out.println("Registered successfully! Type help to continue");
             out.loggedIn = true;
             out.authToken = res.authToken;
+            out.username = res.username;
 
         } catch (IOException ex) {
             System.out.println("Error: " + ex.getMessage());
@@ -94,6 +95,7 @@ public class PreloginUI {
             System.out.println("Logged in successfully! Type help to continue");
             out.loggedIn = true;
             out.authToken = res.authToken();
+            out.username = res.username();
 
         } catch (IOException ex) {
             System.out.println("Error: " + ex.getMessage());

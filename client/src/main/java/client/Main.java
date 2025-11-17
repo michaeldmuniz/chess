@@ -13,29 +13,51 @@ public class Main {
         ServerFacade server = new ServerFacade(url);
 
         PreloginUI prelogin = new PreloginUI(server, scanner);
-        PostloginUI postlogin = new PostloginUI(server, scanner);
 
         boolean quit = false;
         boolean loggedIn = false;
         String authToken = null;
+        String username = null;
 
         System.out.println("👑 Welcome to 240 chess. Type help to begin.");
 
+        PostloginUI postlogin = null;
+
         while (!quit) {
+
             if (!loggedIn) {
                 PreloginResult res = prelogin.runOnce();
-                if (res.quit) quit = true;
+
+                if (res.quit) {
+                    quit = true;
+                }
+
                 if (res.loggedIn) {
                     loggedIn = true;
                     authToken = res.authToken;
+                    username = res.username;
+
+
+                    postlogin = new PostloginUI(server, scanner, username);
                 }
-            } else {
+
+            }
+
+
+            else {
                 PostloginResult res = postlogin.runOnce(authToken);
-                if (res.quit) quit = true;
+
+                if (res.quit) {
+                    quit = true;
+                }
+
                 if (res.loggedOut) {
                     loggedIn = false;
                     authToken = null;
+                    username = null;
+                    postlogin = null;  // reset
                 }
+
             }
         }
 
