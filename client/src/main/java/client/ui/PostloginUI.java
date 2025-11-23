@@ -206,16 +206,16 @@ public class PostloginUI {
         }
 
 
-        System.out.println("Parsed play request:");
-        System.out.println("  Game #" + index + " -> ID " + game.gameID());
-        System.out.println("  Color: " + colorInput);
+//        System.out.println("Parsed play request:");
+//        System.out.println("  Game #" + index + " -> ID " + game.gameID());
+//        System.out.println("  Color: " + colorInput);
 
         var joinReq = new JoinGameRequest(colorInput, game.gameID());
 
         try {
             server.joinGame(joinReq, authToken);
 
-            System.out.println("Successfully joined game " + game.gameID() + " as " + colorInput + ".");
+            System.out.println("Successfully joined game" + " as " + colorInput + ".");
             boolean whitePerspective = colorInput.equals("WHITE");
 
             var printer = new BoardPrinter();

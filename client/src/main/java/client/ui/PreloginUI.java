@@ -75,7 +75,7 @@ public class PreloginUI {
             out.username = res.username;
 
         } catch (IOException ex) {
-            System.out.println("Error: " + ex.getMessage());
+            System.out.println("Username already taken");
         }
     }
 
@@ -98,7 +98,7 @@ public class PreloginUI {
             out.username = res.username();
 
         } catch (IOException ex) {
-            System.out.println("Error: " + ex.getMessage());
+            System.out.println("Invalid Credentials");
         }
     }
 
