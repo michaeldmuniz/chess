@@ -49,21 +49,8 @@ public class Server {
         javalin.get("/game", listGamesHandler); // List games
         javalin.put("/game", joinGameHandler); // Join game
 
-        try {
-            // Set DataAccess for WebSocketHandler
-            WebSocketHandler.setDataAccess(dao);
-
-            var wsContainer = (jakarta.websocket.server.ServerContainer)
-                    javalin.jettyServer().getServer()
-                            .getAttribute("jakarta.websocket.server.ServerContainer");
-
-            wsContainer.addEndpoint(WebSocketHandler.class);
-
-            System.out.println("WebSocket /ws endpoint registered.");
-        } catch (Exception e) {
-            System.out.println("Failed to register WebSocket endpoint: " + e.getMessage());
-        }
-
+        var webSocketHandler = new WebSocketHandler();
+        webSocketHandler.register(javalin);
     }
 
     public int run(int desiredPort) {
