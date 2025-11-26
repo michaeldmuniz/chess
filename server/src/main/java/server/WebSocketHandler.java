@@ -46,9 +46,7 @@ public class WebSocketHandler {
                 case MAKE_MOVE -> {
                     System.out.println("MAKE_MOVE command received (no logic yet)");
                 }
-                case LEAVE -> {
-                    System.out.println("LEAVE command received (no logic yet)");
-                }
+                case LEAVE -> handleLeave(session, cmd);
                 case RESIGN -> {
                     System.out.println("RESIGN command received (no logic yet)");
                 }
@@ -133,6 +131,59 @@ public class WebSocketHandler {
     private void sendError(Session session, String errorMessage) {
         ServerErrorMessage error = new ServerErrorMessage(errorMessage);
         sendMessage(session, error);
+    }
+
+    private void handleLeave(Session session, UserGameCommand cmd) {
+        try {
+            // Validate auth token
+            if (cmd.getAuthToken() == null) {
+                sendError(session, "Error: unauthorized");
+                return;
+            }
+
+            AuthData auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                sendError(session, "Error: unauthorized");
+                return;
+            }
+
+            // Validate game ID
+            if (cmd.getGameID() == null) {
+                sendError(session, "Error: bad request");
+                return;
+            }
+
+            GameData game = dao.getGame(cmd.getGameID());
+            if (game == null) {
+                sendError(session, "Error: bad request");
+                return;
+            }
+
+            String username = auth.username();
+
+            // If user is a player, update the game to remove them
+            GameData updatedGame = game;
+            if (username.equals(game.whiteUsername())) {
+                updatedGame = new GameData(game.gameID(), null, game.blackUsername(), game.gameName(), game.game());
+                dao.updateGame(updatedGame);
+            } else if (username.equals(game.blackUsername())) {
+                updatedGame = new GameData(game.gameID(), game.whiteUsername(), null, game.gameName(), game.game());
+                dao.updateGame(updatedGame);
+            }
+
+            // Remove session from connection manager
+            connections.remove(session);
+
+            // Send notification to other clients
+            String notificationMsg = username + " left the game";
+            ServerNotificationMessage notification = new ServerNotificationMessage(notificationMsg);
+            broadcastToOthers(cmd.getGameID(), session, notification);
+
+        } catch (DataAccessException e) {
+            sendError(session, "Error: " + e.getMessage());
+        } catch (Exception e) {
+            sendError(session, "Error: unexpected failure");
+        }
     }
 
     private void broadcastToOthers(int gameID, Session excludeSession, ServerMessage message) {
