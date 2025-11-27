@@ -1,12 +1,19 @@
 package server;
 
+import chess.ChessGame;
 import com.google.gson.Gson;
 import dataaccess.DataAccess;
+import dataaccess.DataAccessException;
 import io.javalin.Javalin;
 import io.javalin.websocket.WsContext;
-import websocket.commands.UserGameCommand;
+import model.AuthData;
+import model.GameData;
 import websocket.commands.MakeMoveCommand;
-import websocket.messages.*;
+import websocket.commands.UserGameCommand;
+import websocket.messages.ErrorMessage;
+import websocket.messages.LoadGameMessage;
+import websocket.messages.NotificationMessage;
+import websocket.messages.ServerMessage;
 
 public class WebSocketHandler {
 
@@ -34,17 +41,21 @@ public class WebSocketHandler {
             });
 
             ws.onMessage(ctx -> {
-                String json = ctx.message();
-                UserGameCommand baseCmd = gson.fromJson(json, UserGameCommand.class);
-                routeCommand(ctx, baseCmd, json);
+                String rawJson = ctx.message();
+
+                UserGameCommand cmd = gson.fromJson(rawJson, UserGameCommand.class);
+                if (cmd == null || cmd.getCommandType() == null) {
+                    sendError(ctx, "Error: invalid command");
+                    return;
+                }
+
+                routeCommand(ctx, cmd, rawJson);
             });
         });
     }
 
     private void routeCommand(WsContext ctx, UserGameCommand cmd, String rawJson) {
-
         switch (cmd.getCommandType()) {
-
             case CONNECT -> handleConnect(ctx, cmd);
 
             case MAKE_MOVE -> {
@@ -60,58 +71,128 @@ public class WebSocketHandler {
 
     private void handleConnect(WsContext ctx, UserGameCommand cmd) {
         try {
+            // Validate auth token
             var auth = dao.getAuth(cmd.getAuthToken());
             if (auth == null) {
-                sendError(ctx, "Error: invalid auth token");
-                return;
-            }
-
-            var game = dao.getGame(cmd.getGameID());
-            if (game == null) {
-                sendError(ctx, "Error: invalid game ID");
+                manager.sendToSession(ctx.sessionId(),
+                        new ErrorMessage("Error: bad auth"));
                 return;
             }
 
             String username = auth.username();
-            String role;
+            int gameID = cmd.getGameID();
 
-            if (game.whiteUsername() != null && game.whiteUsername().equals(username)) {
+            // Validate game exists
+            var gameData = dao.getGame(gameID);
+            if (gameData == null) {
+                manager.sendToSession(ctx.sessionId(),
+                        new ErrorMessage("Error: bad game ID"));
+                return;
+            }
+
+            // Determine user's role in this game
+            String role;
+            if (username.equals(gameData.whiteUsername())) {
                 role = "white";
-            } else if (game.blackUsername() != null && game.blackUsername().equals(username)) {
+            } else if (username.equals(gameData.blackUsername())) {
                 role = "black";
             } else {
                 role = "observer";
             }
 
-            // store session
-            manager.addSession(ctx, username, cmd.getGameID(), role);
+            // Register WebSocket session
+            manager.addSession(ctx, username, gameID, role);
 
-            // send LOAD_GAME to this session
-            var load = new LoadGameMessage(game);
-            ctx.send(gson.toJson(load));
+            // Send LOAD_GAME back to this user
+            LoadGameMessage load = new LoadGameMessage(gameData.game());
+            manager.sendToSession(ctx.sessionId(), load);
 
-            // notify others
-            var note = new NotificationMessage(username + " connected as " + role);
-            manager.broadcastToGameExcept(ctx, cmd.getGameID(), note);
+            // Notify other players
+            NotificationMessage note =
+                    new NotificationMessage(username + " connected to game");
+            manager.broadcastToGameExcept(ctx, gameID, note);
 
-        } catch (Exception ex) {
-            sendError(ctx, "Error: " + ex.getMessage());
+        } catch (Exception e) {
+            manager.sendToSession(ctx.sessionId(),
+                    new ErrorMessage("Error: " + e.getMessage()));
+        }
+    }
+
+
+    private void handleLeave(WsContext ctx, UserGameCommand cmd) {
+        try {
+            // Validate auth
+            AuthData auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                sendError(ctx, "Error: unauthorized");
+                return;
+            }
+
+            int gameID = cmd.getGameID();
+            GameData game = dao.getGame(gameID);
+            if (game == null) {
+                sendError(ctx, "Error: bad game id");
+                return;
+            }
+
+            String username = auth.username();
+
+            // If this user is a player, remove them from the game in the DB
+            GameData updatedGame = game;
+
+            if (username.equals(game.whiteUsername())) {
+                updatedGame = new GameData(
+                        game.gameID(),
+                        null,                         // white leaves
+                        game.blackUsername(),
+                        game.gameName(),
+                        game.game()
+                );
+            } else if (username.equals(game.blackUsername())) {
+                updatedGame = new GameData(
+                        game.gameID(),
+                        game.whiteUsername(),
+                        null,                         // black leaves
+                        game.gameName(),
+                        game.game()
+                );
+            }
+
+            // Only call updateGame if we actually changed something
+            if (updatedGame != game) {
+                dao.updateGame(updatedGame);
+            }
+
+            // Remove this websocket session from our in-memory maps
+            manager.removeSession(ctx);
+
+            // Notify remaining clients in this game
+            ServerMessage note = new NotificationMessage(username + " left the game");
+            manager.broadcastToGame(gameID, note);
+
+            // Spec/tests say: leaving user does NOT get a notification is done
+
+        } catch (DataAccessException e) {
+            sendError(ctx, "Error: " + e.getMessage());
         }
     }
 
 
     private void handleMakeMove(WsContext ctx, MakeMoveCommand cmd) {
-    }
-
-    private void handleLeave(WsContext ctx, UserGameCommand cmd) {
+        sendError(ctx, "Error: MAKE_MOVE not implemented yet");
     }
 
     private void handleResign(WsContext ctx, UserGameCommand cmd) {
+        sendError(ctx, "Error: RESIGN not implemented yet");
     }
 
-    private void sendError(WsContext ctx, String msg) {
-        ErrorMessage error = new ErrorMessage(msg);
-        ctx.send(gson.toJson(error));
-    }
 
+    private void sendError(WsContext ctx, String message) {
+        // Ensure the word "Error" appears
+        if (!message.toLowerCase().contains("error")) {
+            message = "Error: " + message;
+        }
+        ErrorMessage err = new ErrorMessage(message);
+        ctx.send(gson.toJson(err));
+    }
 }
