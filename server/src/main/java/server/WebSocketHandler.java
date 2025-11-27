@@ -1,54 +1,72 @@
 package server;
 
 import com.google.gson.Gson;
+import dataaccess.DataAccess;
 import io.javalin.Javalin;
 import io.javalin.websocket.WsContext;
 import websocket.commands.UserGameCommand;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import websocket.commands.MakeMoveCommand;
+import websocket.messages.*;
 
 public class WebSocketHandler {
 
+    private final WebSocketConnectionManager manager = new WebSocketConnectionManager();
+    private final DataAccess dao;
     private final Gson gson = new Gson();
 
-    private final Map<String, WsContext> connections = new ConcurrentHashMap<>();
+    public WebSocketHandler(DataAccess dao) {
+        this.dao = dao;
+    }
 
-    public void register(Javalin app) {
+    public void configure(Javalin app) {
         app.ws("/ws", ws -> {
 
             ws.onConnect(ctx -> {
-                connections.put(ctx.sessionId(), ctx);
-                System.out.println("[WS] Connected: " + ctx.sessionId());
+                System.out.println("WS connected: " + ctx.sessionId());
             });
 
             ws.onClose(ctx -> {
-                connections.remove(ctx.sessionId());
-                System.out.println("[WS] Closed: " + ctx.sessionId());
+                manager.removeSession(ctx);
             });
 
             ws.onError(ctx -> {
-                System.out.println("[WS] Error on " + ctx.sessionId() + ": " + ctx.error());
+                manager.removeSession(ctx);
             });
 
             ws.onMessage(ctx -> {
-                String raw = ctx.message();
-                System.out.println("[WS] Raw message: " + raw);
-
-                try {
-                    UserGameCommand cmd = gson.fromJson(raw, UserGameCommand.class);
-
-                    System.out.printf(
-                            "[WS] Parsed command: type=%s gameID=%s auth=%s%n",
-                            cmd.getCommandType(), cmd.getGameID(), cmd.getAuthToken()
-                    );
-
-                    // TODO: Implement actual command handling later.
-
-                } catch (Exception ex) {
-                    System.out.println("[WS] Failed to parse UserGameCommand: " + ex.getMessage());
-                }
+                String json = ctx.message();
+                UserGameCommand baseCmd = gson.fromJson(json, UserGameCommand.class);
+                routeCommand(ctx, baseCmd, json);
             });
         });
+    }
+
+    private void routeCommand(WsContext ctx, UserGameCommand cmd, String rawJson) {
+
+        switch (cmd.getCommandType()) {
+
+            case CONNECT -> handleConnect(ctx, cmd);
+
+            case MAKE_MOVE -> {
+                MakeMoveCommand moveCmd = gson.fromJson(rawJson, MakeMoveCommand.class);
+                handleMakeMove(ctx, moveCmd);
+            }
+
+            case LEAVE -> handleLeave(ctx, cmd);
+
+            case RESIGN -> handleResign(ctx, cmd);
+        }
+    }
+
+    private void handleConnect(WsContext ctx, UserGameCommand cmd) {
+    }
+
+    private void handleMakeMove(WsContext ctx, MakeMoveCommand cmd) {
+    }
+
+    private void handleLeave(WsContext ctx, UserGameCommand cmd) {
+    }
+
+    private void handleResign(WsContext ctx, UserGameCommand cmd) {
     }
 }
