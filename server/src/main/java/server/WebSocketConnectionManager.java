@@ -10,25 +10,24 @@ public class WebSocketConnectionManager {
 
     private final Gson gson = new Gson();
 
-    // sessionId WsContext
     private final Map<String, WsContext> sessions = new HashMap<>();
 
-    // sessionId username
     private final Map<String, String> userBySession = new HashMap<>();
 
-    // sessionId gameID
     private final Map<String, Integer> gameBySession = new HashMap<>();
 
-    // gameID all sessionIds in that game
+    private final Map<String, String> roleBySession = new HashMap<>();
+
     private final Map<Integer, Set<String>> sessionsInGame = new HashMap<>();
 
 
-    public void addSession(WsContext ctx, String username, int gameID) {
+    public void addSession(WsContext ctx, String username, int gameID, String role) {
         String id = ctx.sessionId();
 
         sessions.put(id, ctx);
         userBySession.put(id, username);
         gameBySession.put(id, gameID);
+        roleBySession.put(id, role);
 
         sessionsInGame.putIfAbsent(gameID, new HashSet<>());
         sessionsInGame.get(gameID).add(id);
@@ -46,6 +45,7 @@ public class WebSocketConnectionManager {
         sessions.remove(id);
         userBySession.remove(id);
         gameBySession.remove(id);
+        roleBySession.remove(id);
     }
 
 
@@ -55,6 +55,10 @@ public class WebSocketConnectionManager {
 
     public Integer getGameId(WsContext ctx) {
         return gameBySession.get(ctx.sessionId());
+    }
+
+    public String getRole(WsContext ctx) {
+        return roleBySession.get(ctx.sessionId());
     }
 
 
@@ -78,13 +82,14 @@ public class WebSocketConnectionManager {
         }
     }
 
-    public void broadcastToGameExcept(int gameID, String excludedSessionId, ServerMessage msg) {
+    public void broadcastToGameExcept(WsContext excludedCtx, int gameID, ServerMessage msg) {
         if (!sessionsInGame.containsKey(gameID)) return;
 
+        String excludedId = excludedCtx.sessionId();
         String json = gson.toJson(msg);
 
         for (String sessionId : sessionsInGame.get(gameID)) {
-            if (!sessionId.equals(excludedSessionId)) {
+            if (!sessionId.equals(excludedId)) {
                 WsContext ctx = sessions.get(sessionId);
                 if (ctx != null && ctx.session.isOpen()) {
                     ctx.send(json);

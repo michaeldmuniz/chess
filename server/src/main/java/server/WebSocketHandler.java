@@ -59,7 +59,46 @@ public class WebSocketHandler {
     }
 
     private void handleConnect(WsContext ctx, UserGameCommand cmd) {
+        try {
+            var auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                sendError(ctx, "Error: invalid auth token");
+                return;
+            }
+
+            var game = dao.getGame(cmd.getGameID());
+            if (game == null) {
+                sendError(ctx, "Error: invalid game ID");
+                return;
+            }
+
+            String username = auth.username();
+            String role;
+
+            if (game.whiteUsername() != null && game.whiteUsername().equals(username)) {
+                role = "white";
+            } else if (game.blackUsername() != null && game.blackUsername().equals(username)) {
+                role = "black";
+            } else {
+                role = "observer";
+            }
+
+            // store session
+            manager.addSession(ctx, username, cmd.getGameID(), role);
+
+            // send LOAD_GAME to this session
+            var load = new LoadGameMessage(game);
+            ctx.send(gson.toJson(load));
+
+            // notify others
+            var note = new NotificationMessage(username + " connected as " + role);
+            manager.broadcastToGameExcept(ctx, cmd.getGameID(), note);
+
+        } catch (Exception ex) {
+            sendError(ctx, "Error: " + ex.getMessage());
+        }
     }
+
 
     private void handleMakeMove(WsContext ctx, MakeMoveCommand cmd) {
     }
@@ -69,4 +108,10 @@ public class WebSocketHandler {
 
     private void handleResign(WsContext ctx, UserGameCommand cmd) {
     }
+
+    private void sendError(WsContext ctx, String msg) {
+        ErrorMessage error = new ErrorMessage(msg);
+        ctx.send(gson.toJson(error));
+    }
+
 }
