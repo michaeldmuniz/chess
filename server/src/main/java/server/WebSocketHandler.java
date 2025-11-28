@@ -146,7 +146,8 @@ public class WebSocketHandler {
                         null,                         // white leaves
                         game.blackUsername(),
                         game.gameName(),
-                        game.game()
+                        game.game(),
+                        false
                 );
             } else if (username.equals(game.blackUsername())) {
                 updatedGame = new GameData(
@@ -154,7 +155,8 @@ public class WebSocketHandler {
                         game.whiteUsername(),
                         null,                         // black leaves
                         game.gameName(),
-                        game.game()
+                        game.game(),
+                        false
                 );
             }
 
@@ -193,6 +195,12 @@ public class WebSocketHandler {
                 return;
             }
 
+            // Cannot move if game is already over
+            if (gameData.gameOver()) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: game over"));
+                return;
+            }
+
             String username = auth.username();
             ChessGame.TeamColor playerColor = null;
 
@@ -228,21 +236,39 @@ public class WebSocketHandler {
 
             game.makeMove(move);
 
-            dao.updateGame(gameData);
+            GameData updated = new GameData(
+                    gameData.gameID(),
+                    gameData.whiteUsername(),
+                    gameData.blackUsername(),
+                    gameData.gameName(),
+                    game,                   // NEW GAME STATE
+                    gameData.gameOver()
+            );
+
+            dao.updateGame(updated);
 
             LoadGameMessage loadMsg = new LoadGameMessage(game);
-
             manager.sendToSession(ctx.sessionId(), loadMsg);
 
-            NotificationMessage notif = new NotificationMessage(username + " made a move");
             manager.broadcastToGameExcept(ctx, cmd.getGameID(), loadMsg);
-            manager.broadcastToGameExcept(ctx, cmd.getGameID(), notif);
+            manager.broadcastToGameExcept(ctx, cmd.getGameID(),
+                    new NotificationMessage(username + " made a move"));
 
             if (game.isInCheckmate(ChessGame.TeamColor.WHITE) ||
-                    game.isInCheckmate(ChessGame.TeamColor.BLACK))
-            {
+                    game.isInCheckmate(ChessGame.TeamColor.BLACK)) {
+
                 NotificationMessage checkmate = new NotificationMessage("Checkmate!");
                 manager.broadcastToGame(cmd.getGameID(), checkmate);
+
+                GameData ended = new GameData(
+                        gameData.gameID(),
+                        gameData.whiteUsername(),
+                        gameData.blackUsername(),
+                        gameData.gameName(),
+                        game,
+                        true
+                );
+                dao.updateGame(ended);
             }
 
         } catch (Exception e) {
@@ -250,8 +276,58 @@ public class WebSocketHandler {
         }
     }
 
+
     private void handleResign(WsContext ctx, UserGameCommand cmd) {
-        sendError(ctx, "Error: RESIGN not implemented yet");
+        try {
+            AuthData auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                sendError(ctx, "Error: unauthorized");
+                return;
+            }
+
+            int gameID = cmd.getGameID();
+            GameData game = dao.getGame(gameID);
+            if (game == null) {
+                sendError(ctx, "Error: bad game id");
+                return;
+            }
+
+            if (game.gameOver()) {
+                sendError(ctx, "Error: game already over");
+                return;
+            }
+
+            String username = auth.username();
+
+            boolean isPlayer =
+                    username.equals(game.whiteUsername()) ||
+                            username.equals(game.blackUsername());
+
+            if (!isPlayer) {
+                sendError(ctx, "Error: observers cannot resign");
+                return;
+            }
+
+            GameData updated = new GameData(
+                    game.gameID(),
+                    game.whiteUsername(),
+                    game.blackUsername(),
+                    game.gameName(),
+                    game.game(),
+                    true
+            );
+
+            dao.updateGame(updated);
+
+            NotificationMessage msg = new NotificationMessage(username + " resigned");
+
+            manager.sendToSession(ctx.sessionId(), msg);
+
+            manager.broadcastToGameExcept(ctx, gameID, msg);
+
+        } catch (Exception e) {
+            sendError(ctx, "Error: " + e.getMessage());
+        }
     }
 
 
