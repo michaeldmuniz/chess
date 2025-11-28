@@ -179,7 +179,75 @@ public class WebSocketHandler {
 
 
     private void handleMakeMove(WsContext ctx, MakeMoveCommand cmd) {
-        sendError(ctx, "Error: MAKE_MOVE not implemented yet");
+
+        try {
+            var auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: bad auth"));
+                return;
+            }
+
+            var gameData = dao.getGame(cmd.getGameID());
+            if (gameData == null) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: bad game id"));
+                return;
+            }
+
+            String username = auth.username();
+            ChessGame.TeamColor playerColor = null;
+
+            if (username.equals(gameData.whiteUsername())) {
+                playerColor = ChessGame.TeamColor.WHITE;
+            } else if (username.equals(gameData.blackUsername())) {
+                playerColor = ChessGame.TeamColor.BLACK;
+            } else {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: observers cannot move"));
+                return;
+            }
+
+            ChessGame game = gameData.game();
+
+            if (game.getTeamTurn() != playerColor) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: not your turn"));
+                return;
+            }
+
+            var move = cmd.getMove();
+            var startingPiece = game.getBoard().getPiece(move.getStartPosition());
+
+            if (startingPiece == null || startingPiece.getTeamColor() != playerColor) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: cannot move opponent piece"));
+                return;
+            }
+
+            var legalMoves = game.validMoves(move.getStartPosition());
+            if (legalMoves == null || !legalMoves.contains(move)) {
+                manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: invalid move"));
+                return;
+            }
+
+            game.makeMove(move);
+
+            dao.updateGame(gameData);
+
+            LoadGameMessage loadMsg = new LoadGameMessage(game);
+
+            manager.sendToSession(ctx.sessionId(), loadMsg);
+
+            NotificationMessage notif = new NotificationMessage(username + " made a move");
+            manager.broadcastToGameExcept(ctx, cmd.getGameID(), loadMsg);
+            manager.broadcastToGameExcept(ctx, cmd.getGameID(), notif);
+
+            if (game.isInCheckmate(ChessGame.TeamColor.WHITE) ||
+                    game.isInCheckmate(ChessGame.TeamColor.BLACK))
+            {
+                NotificationMessage checkmate = new NotificationMessage("Checkmate!");
+                manager.broadcastToGame(cmd.getGameID(), checkmate);
+            }
+
+        } catch (Exception e) {
+            manager.sendToSession(ctx.sessionId(), new ErrorMessage("Error: " + e.getMessage()));
+        }
     }
 
     private void handleResign(WsContext ctx, UserGameCommand cmd) {
