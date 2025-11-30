@@ -6,6 +6,11 @@ import client.dto.JoinGameRequest;
 import client.dto.ListGamesRequest;
 import client.dto.ListGamesResponse;
 import model.GameData;
+import client.websocket.WebSocketClient;
+import client.gameplay.GameplayState;
+import client.ui.GameplayUI;
+import client.ui.GameplayCommands;
+
 
 import java.io.IOException;
 import java.util.List;
@@ -150,83 +155,75 @@ public class PostloginUI {
             return;
         }
 
-        // Validate that listGames was run at least once
         if (lastListedGames == null || lastListedGames.isEmpty()) {
             System.out.println("No games loaded. Run 'list' first.");
             return;
         }
 
-        // Validate range
         if (index < 1 || index > lastListedGames.size()) {
             System.out.println("Invalid game number.");
             return;
         }
 
-        // Retrieve GameData
         var game = lastListedGames.get(index - 1);
 
-        // Validate color
         String colorInput = parts[2].toUpperCase();
         if (!colorInput.equals("WHITE") && !colorInput.equals("BLACK")) {
             System.out.println("Color must be WHITE or BLACK.");
             return;
         }
 
+        boolean whitePerspective;
 
+        // Player is re-entering their own game
         if (colorInput.equals("WHITE")
                 && game.whiteUsername() != null
                 && game.whiteUsername().equals(currentUsername)) {
 
             System.out.println("Re-entering game as WHITE...");
-            boolean whitePerspective = true;
+            whitePerspective = true;
 
-            var printer = new BoardPrinter();
-            printer.drawBoard(game.game(), whitePerspective);
-
-            out.enteredGame = true;
-            out.joinedGame = game;
-            out.joinColor = colorInput;
-            return;
-        }
-
-        if (colorInput.equals("BLACK")
+        } else if (colorInput.equals("BLACK")
                 && game.blackUsername() != null
                 && game.blackUsername().equals(currentUsername)) {
 
             System.out.println("Re-entering game as BLACK...");
-            boolean whitePerspective = false;
+            whitePerspective = false;
 
-            var printer = new BoardPrinter();
-            printer.drawBoard(game.game(), whitePerspective);
+        } else {
+            var joinReq = new JoinGameRequest(colorInput, game.gameID());
 
-            out.enteredGame = true;
-            out.joinedGame = game;
-            out.joinColor = colorInput;
-            return;
+            try {
+                server.joinGame(joinReq, authToken);
+                System.out.println("Successfully joined game as " + colorInput + ".");
+            } catch (IOException ex) {
+                System.out.println("Join game failed: " + ex.getMessage());
+                return;
+            }
+
+            whitePerspective = colorInput.equals("WHITE");
         }
 
-
-//        System.out.println("Parsed play request:");
-//        System.out.println("  Game #" + index + " -> ID " + game.gameID());
-//        System.out.println("  Color: " + colorInput);
-
-        var joinReq = new JoinGameRequest(colorInput, game.gameID());
-
         try {
-            server.joinGame(joinReq, authToken);
+            String wsUrl = "ws://localhost:8080/ws";
+            WebSocketClient ws = new WebSocketClient(wsUrl, null);
 
-            System.out.println("Successfully joined game" + " as " + colorInput + ".");
-            boolean whitePerspective = colorInput.equals("WHITE");
+            GameplayState state = new GameplayState(whitePerspective);
+            ws.attachState(state);
 
-            var printer = new BoardPrinter();
-            printer.drawBoard(game.game(), whitePerspective);
+            GameplayCommands.init(authToken, game.gameID());
 
-            out.enteredGame = true;
-            out.joinedGame = game;
-            out.joinColor = colorInput;
+            // CONNECT message
+            ws.sendConnect(authToken, game.gameID());
 
-        } catch (IOException ex) {
-            System.out.println("Join game failed: " + ex.getMessage());
+            // Start gameplay UI loop
+            GameplayUI gameplay = new GameplayUI(ws, state, scanner);
+            gameplay.run();
+
+            ws.close();
+
+        } catch (Exception e) {
+            System.out.println("Failed to start gameplay mode: " + e.getMessage());
         }
     }
 
@@ -248,13 +245,11 @@ public class PostloginUI {
 
     private void handleObserve(String[] parts, String authToken) {
 
-        // Usage: observe <GAME_NUMBER>
         if (parts.length < 2) {
             System.out.println("Usage: observe <GAME_NUMBER>");
             return;
         }
 
-        // Parse game number
         int index;
         try {
             index = Integer.parseInt(parts[1]);
@@ -263,7 +258,6 @@ public class PostloginUI {
             return;
         }
 
-        // Must have run list first
         if (lastListedGames == null || lastListedGames.isEmpty()) {
             System.out.println("No games loaded. Run 'list' first.");
             return;
@@ -274,14 +268,31 @@ public class PostloginUI {
             return;
         }
 
-        // Retrieve game
         var game = lastListedGames.get(index - 1);
 
         System.out.println("Observing game \"" + game.gameName() + "\"");
 
-        // Draw board *from white perspective* (Phase 5 rules)
-        var printer = new BoardPrinter();
-        printer.drawBoard(game.game(), true);
+        boolean whitePerspective = true;
+
+        try {
+            String wsUrl = "ws://localhost:8080/ws";
+            WebSocketClient ws = new WebSocketClient(wsUrl, null);
+
+            GameplayState state = new GameplayState(whitePerspective);
+            ws.attachState(state);
+
+            GameplayCommands.init(authToken, game.gameID());
+
+            ws.sendConnect(authToken, game.gameID());
+
+            GameplayUI gameplay = new GameplayUI(ws, state, scanner);
+            gameplay.run();
+
+            ws.close();
+
+        } catch (Exception e) {
+            System.out.println("Failed to enter observe mode: " + e.getMessage());
+        }
     }
 
 

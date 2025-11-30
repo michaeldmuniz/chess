@@ -3,6 +3,7 @@ package client.websocket;
 import com.google.gson.Gson;
 import jakarta.websocket.*;
 
+import client.gameplay.GameplayState;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import websocket.messages.LoadGameMessage;
@@ -18,6 +19,9 @@ public class WebSocketClient {
 
     private final Gson gson = new Gson();
     private Session session;
+    private final String wsUrl;
+
+    private GameplayState gameplayState;
 
     public interface MessageHandler {
         void onLoadGame(LoadGameMessage msg);
@@ -27,9 +31,16 @@ public class WebSocketClient {
 
     private final MessageHandler handler;
 
-
-    public WebSocketClient(String wsUrl, MessageHandler handler) throws Exception {
+    public WebSocketClient(String wsUrl, MessageHandler handler) {
+        this.wsUrl = wsUrl;
         this.handler = handler;
+    }
+
+    public void attachState(GameplayState state) {
+        this.gameplayState = state;
+    }
+
+    public void connect() throws Exception {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         container.connectToServer(this, new URI(wsUrl));
     }
@@ -46,29 +57,30 @@ public class WebSocketClient {
             ServerMessage base = gson.fromJson(json, ServerMessage.class);
 
             switch (base.getServerMessageType()) {
+
                 case LOAD_GAME -> {
-                    LoadGameMessage load =
-                            gson.fromJson(json, LoadGameMessage.class);
+                    LoadGameMessage load = gson.fromJson(json, LoadGameMessage.class);
                     System.out.println("[WS] LOAD_GAME received");
-                    if (handler != null) {
-                        handler.onLoadGame(load);
+
+                    if (gameplayState != null) {
+                        gameplayState.setGame(load.getGame());
                     }
+
+                    handler.onLoadGame(load);
                 }
+
                 case NOTIFICATION -> {
                     NotificationMessage note =
                             gson.fromJson(json, NotificationMessage.class);
                     System.out.println("[WS] NOTIFICATION: " + note.getMessage());
-                    if (handler != null) {
-                        handler.onNotification(note);
-                    }
+                    handler.onNotification(note);
                 }
+
                 case ERROR -> {
                     ErrorMessage err =
                             gson.fromJson(json, ErrorMessage.class);
                     System.out.println("[WS] ERROR: " + err.getErrorMessage());
-                    if (handler != null) {
-                        handler.onError(err);
-                    }
+                    handler.onError(err);
                 }
             }
         } catch (Exception e) {
@@ -87,7 +99,6 @@ public class WebSocketClient {
         System.out.println("[WS] Error: " + thr.getMessage());
     }
 
-
     public void sendCommand(UserGameCommand cmd) {
         if (session == null || !session.isOpen()) {
             System.out.println("[WS] Cannot send; session is not open");
@@ -96,7 +107,6 @@ public class WebSocketClient {
         String json = gson.toJson(cmd);
         session.getAsyncRemote().sendText(json);
     }
-
 
     public void sendConnect(String authToken, int gameID) {
         UserGameCommand cmd = new UserGameCommand(
