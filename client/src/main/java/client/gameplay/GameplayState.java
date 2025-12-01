@@ -1,6 +1,11 @@
 package client.gameplay;
 
 import chess.ChessGame;
+import chess.ChessMove;
+import chess.ChessPosition;
+
+import java.util.Collection;
+import java.util.List;
 
 public class GameplayState {
 
@@ -31,4 +36,7 @@ public class GameplayState {
     public void stop() {
         running = false;
     }
+    private ChessPosition highlightOrigin = null;
+    private Collection<ChessMove> highlightMoves = List.of();
+
 }

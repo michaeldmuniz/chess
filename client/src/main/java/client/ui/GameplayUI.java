@@ -25,9 +25,17 @@ public class GameplayUI {
 
         while (state.isRunning()) {
 
-            ChessGame game = state.getGame();
-            if (game != null) {
-                printer.drawBoard(game, state.isWhitePerspective());
+            if (state.shouldRedraw()) {
+                ChessGame game = state.getGame();
+                if (game != null) {
+                    printer.drawBoard(
+                            game,
+                            state.isWhitePerspective(),
+                            state.getHighlightOrigin(),
+                            state.getHighlightMoves()
+                    );
+                }
+                state.clearRedraw();
             }
 
             System.out.print("[GAME] >>> ");
@@ -39,7 +47,7 @@ public class GameplayUI {
 
             switch (cmd) {
                 case "help" -> printHelp();
-                case "redraw" -> { /* loop will auto redraw next iteration */ }
+                case "redraw" -> state.markRedraw();
 
                 case "leave" -> {
                     ws.sendCommand(GameplayCommands.leave());

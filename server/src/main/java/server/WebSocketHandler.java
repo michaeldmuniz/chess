@@ -8,6 +8,7 @@ import io.javalin.Javalin;
 import io.javalin.websocket.WsContext;
 import model.AuthData;
 import model.GameData;
+import websocket.commands.HighlightCommand;
 import websocket.commands.MakeMoveCommand;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ErrorMessage;
@@ -56,6 +57,7 @@ public class WebSocketHandler {
 
     private void routeCommand(WsContext ctx, UserGameCommand cmd, String rawJson) {
         switch (cmd.getCommandType()) {
+
             case CONNECT -> handleConnect(ctx, cmd);
 
             case MAKE_MOVE -> {
@@ -66,6 +68,11 @@ public class WebSocketHandler {
             case LEAVE -> handleLeave(ctx, cmd);
 
             case RESIGN -> handleResign(ctx, cmd);
+
+            case HIGHLIGHT -> {                             // ★ NEW
+                HighlightCommand hl = gson.fromJson(rawJson, HighlightCommand.class);
+                handleHighlight(ctx, hl);
+            }
         }
     }
 
@@ -242,7 +249,9 @@ public class WebSocketHandler {
                     gameData.blackUsername(),
                     gameData.gameName(),
                     game,                   // NEW GAME STATE
-                    gameData.gameOver()
+                    gameData.gameOver(),
+                    null,
+                    null
             );
 
             dao.updateGame(updated);
@@ -266,7 +275,9 @@ public class WebSocketHandler {
                         gameData.blackUsername(),
                         gameData.gameName(),
                         game,
-                        true
+                        true,
+                        null,
+                        null
                 );
                 dao.updateGame(ended);
             }
@@ -314,7 +325,9 @@ public class WebSocketHandler {
                     game.blackUsername(),
                     game.gameName(),
                     game.game(),
-                    true
+                    true,
+                    null,
+                    null
             );
 
             dao.updateGame(updated);
@@ -338,5 +351,54 @@ public class WebSocketHandler {
         }
         ErrorMessage err = new ErrorMessage(message);
         ctx.send(gson.toJson(err));
+    }
+
+    private void handleHighlight(WsContext ctx, HighlightCommand cmd) {
+        try {
+            // Validate auth
+            AuthData auth = dao.getAuth(cmd.getAuthToken());
+            if (auth == null) {
+                sendError(ctx, "Error: unauthorized");
+                return;
+            }
+
+            int gameID = cmd.getGameID();
+            GameData game = dao.getGame(gameID);
+            if (game == null) {
+                sendError(ctx, "Error: bad game id");
+                return;
+            }
+
+            ChessGame chess = game.game();
+
+            // Position the user wants to highlight
+            var pos = cmd.getPosition();
+            var piece = chess.getBoard().getPiece(pos);
+
+            // Get valid moves (may be empty)
+            var validMoves = chess.validMoves(pos);
+            if (validMoves == null) validMoves = java.util.Set.of();
+
+            // We need to store highlight data in GameData
+            GameData updated = new GameData(
+                    game.gameID(),
+                    game.whiteUsername(),
+                    game.blackUsername(),
+                    game.gameName(),
+                    chess,
+                    game.gameOver(),
+                    pos,          // highlight origin
+                    validMoves    // highlight destinations
+            );
+
+            dao.updateGame(updated);
+
+            // Send LOAD_GAME back only to requesting client
+            LoadGameMessage load = new LoadGameMessage(chess);
+            manager.sendToSession(ctx.sessionId(), load);
+
+        } catch (Exception e) {
+            sendError(ctx, "Error: " + e.getMessage());
+        }
     }
 }

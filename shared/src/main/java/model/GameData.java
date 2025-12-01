@@ -1,6 +1,9 @@
 package model;
 
 import chess.ChessGame;
+import chess.ChessPosition;
+import chess.ChessMove;
+import java.util.Collection;
 
 public record GameData(
         int gameID,
@@ -8,5 +11,7 @@ public record GameData(
         String blackUsername,
         String gameName,
         ChessGame game,
-        boolean gameOver
+        boolean gameOver,
+        ChessPosition highlightOrigin,
+        Collection<ChessMove> highlightMoves
 ) {}
