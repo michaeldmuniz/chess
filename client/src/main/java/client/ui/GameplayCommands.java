@@ -2,6 +2,7 @@ package client.ui;
 
 import chess.ChessMove;
 import chess.ChessPosition;
+import client.websocket.WebSocketClient;
 import websocket.commands.UserGameCommand;
 import websocket.commands.MakeMoveCommand;
 
@@ -40,4 +41,8 @@ public class GameplayCommands {
                 token, gameId
         );
     }
+    public static void sendHighlight(WebSocketClient ws, String authToken, int gameID, ChessPosition pos) {
+        ws.sendHighlight(authToken, gameID, pos);
+    }
+
 }

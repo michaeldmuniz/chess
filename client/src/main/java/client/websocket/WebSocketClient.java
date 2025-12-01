@@ -1,9 +1,11 @@
 package client.websocket;
 
+import chess.ChessPosition;
 import com.google.gson.Gson;
 import jakarta.websocket.*;
 
 import client.gameplay.GameplayState;
+import websocket.commands.HighlightCommand;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import websocket.messages.LoadGameMessage;
@@ -124,4 +126,9 @@ public class WebSocketClient {
             } catch (IOException ignored) {}
         }
     }
+    public void sendHighlight(String authToken, int gameID, ChessPosition pos) {
+        HighlightCommand cmd = new HighlightCommand(authToken, gameID, pos);
+        sendCommand(cmd);
+    }
+
 }
