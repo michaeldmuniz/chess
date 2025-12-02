@@ -226,7 +226,9 @@ public class MySQLDataAccess implements DataAccess {
                             rs.getString("blackUsername"),
                             rs.getString("gameName"),
                             gameObj,
-                            false
+                            false,
+                            null,
+                            null
                     );
                 }
                 return null;
@@ -254,7 +256,9 @@ public class MySQLDataAccess implements DataAccess {
                         rs.getString("blackUsername"),
                         rs.getString("gameName"),
                         gameObj,
-                        false
+                        false,
+                        null,
+                        null
                 ));
             }
 

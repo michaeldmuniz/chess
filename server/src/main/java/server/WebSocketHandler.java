@@ -154,7 +154,9 @@ public class WebSocketHandler {
                         game.blackUsername(),
                         game.gameName(),
                         game.game(),
-                        false
+                        false,
+                        null,
+                        null
                 );
             } else if (username.equals(game.blackUsername())) {
                 updatedGame = new GameData(
@@ -163,7 +165,9 @@ public class WebSocketHandler {
                         null,                         // black leaves
                         game.gameName(),
                         game.game(),
-                        false
+                        false,
+                        null,
+                        null
                 );
             }
 
