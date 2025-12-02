@@ -2,6 +2,8 @@ package client.ui;
 
 import client.websocket.WebSocketClient;
 import client.gameplay.GameplayState;
+import websocket.commands.MakeMoveCommand;
+import websocket.commands.UserGameCommand;
 import chess.*;
 import java.util.Scanner;
 
@@ -11,10 +13,19 @@ public class GameplayUI {
     private final GameplayState state;
     private final Scanner scanner;
 
-    public GameplayUI(WebSocketClient ws, GameplayState state, Scanner scanner) {
+    private final String authToken;
+    private final int gameID;
+
+    public GameplayUI(WebSocketClient ws,
+                      GameplayState state,
+                      Scanner scanner,
+                      String authToken,
+                      int gameID) {
         this.ws = ws;
         this.state = state;
         this.scanner = scanner;
+        this.authToken = authToken;
+        this.gameID = gameID;
     }
 
     public void run() {
@@ -50,12 +61,20 @@ public class GameplayUI {
                 case "redraw" -> state.markRedraw();
 
                 case "leave" -> {
-                    ws.sendCommand(GameplayCommands.leave());
+                    ws.sendCommand(new UserGameCommand(
+                            UserGameCommand.CommandType.LEAVE,
+                            authToken,
+                            gameID
+                    ));
                     state.stop();
                 }
 
                 case "resign" -> {
-                    ws.sendCommand(GameplayCommands.resign());
+                    ws.sendCommand(new UserGameCommand(
+                            UserGameCommand.CommandType.RESIGN,
+                            authToken,
+                            gameID
+                    ));
                     state.stop();
                 }
 
@@ -79,10 +98,16 @@ public class GameplayUI {
             ChessPosition from = parsePos(parts[1]);
             ChessPosition to = parsePos(parts[2]);
 
-            ws.sendCommand(GameplayCommands.move(from, to));
+            ChessMove move = new ChessMove(from, to, null);
+
+            ws.sendCommand(new MakeMoveCommand(
+                    authToken,
+                    gameID,
+                    move
+            ));
 
         } catch (Exception ex) {
-            System.out.println("Invalid coordinates. Example: move e2 e4");
+            System.out.println("Invalid move. Example: move e2 e4");
         }
     }
 
@@ -94,19 +119,25 @@ public class GameplayUI {
 
         try {
             ChessPosition pos = parsePos(parts[1]);
-            ws.sendCommand(GameplayCommands.highlight(pos));
+
+            ChessGame game = state.getGame();
+            var moves = game.validMoves(pos);
+
+            if (moves == null || moves.isEmpty()) {
+                System.out.println("No legal moves from " + parts[1]);
+                state.setHighlight(null, null);
+            } else {
+                state.setHighlight(pos, moves);
+            }
+
+            state.markRedraw();
 
         } catch (Exception ex) {
             System.out.println("Invalid square. Example: highlight b1");
         }
     }
 
-    private ChessPosition parsePos(String txt) {
-        txt = txt.toLowerCase();
-        int col = txt.charAt(0) - 'a' + 1;
-        int row = txt.charAt(1) - '0';
-        return new ChessPosition(row, col);
-    }
+
 
     private void printHelp() {
         System.out.println("""
@@ -118,5 +149,13 @@ public class GameplayUI {
               leave
               resign
         """);
+    }
+
+
+    private ChessPosition parsePos(String txt) {
+        txt = txt.toLowerCase();
+        int col = txt.charAt(0) - 'a' + 1;
+        int row = txt.charAt(1) - '0';
+        return new ChessPosition(row, col);
     }
 }
