@@ -146,7 +146,6 @@ public class PostloginUI {
             return;
         }
 
-        // Parse GAME_NUMBER
         int index;
         try {
             index = Integer.parseInt(parts[1]);
@@ -165,7 +164,7 @@ public class PostloginUI {
             return;
         }
 
-        var game = lastListedGames.get(index - 1);
+        GameData game = lastListedGames.get(index - 1);
 
         String colorInput = parts[2].toUpperCase();
         if (!colorInput.equals("WHITE") && !colorInput.equals("BLACK")) {
@@ -175,29 +174,23 @@ public class PostloginUI {
 
         boolean whitePerspective;
 
-        // Player is re-entering their own game
-        if (colorInput.equals("WHITE")
-                && game.whiteUsername() != null
-                && game.whiteUsername().equals(currentUsername)) {
-
+        if (colorInput.equals("WHITE") &&
+                currentUsername.equals(game.whiteUsername())) {
             System.out.println("Re-entering game as WHITE...");
             whitePerspective = true;
 
-        } else if (colorInput.equals("BLACK")
-                && game.blackUsername() != null
-                && game.blackUsername().equals(currentUsername)) {
-
+        } else if (colorInput.equals("BLACK") &&
+                currentUsername.equals(game.blackUsername())) {
             System.out.println("Re-entering game as BLACK...");
             whitePerspective = false;
 
         } else {
-            var joinReq = new JoinGameRequest(colorInput, game.gameID());
-
             try {
-                server.joinGame(joinReq, authToken);
-                System.out.println("Successfully joined game as " + colorInput + ".");
+                JoinGameRequest req = new JoinGameRequest(colorInput, game.gameID());
+                server.joinGame(req, authToken);
+                System.out.println("Joined game as " + colorInput);
             } catch (IOException ex) {
-                System.out.println("Join game failed: " + ex.getMessage());
+                System.out.println("Join failed: " + ex.getMessage());
                 return;
             }
 
@@ -206,24 +199,36 @@ public class PostloginUI {
 
         try {
             String wsUrl = "ws://localhost:8080/ws";
-            WebSocketClient ws = new WebSocketClient(wsUrl, null);
 
             GameplayState state = new GameplayState(whitePerspective);
-            ws.attachState(state);
 
-            GameplayCommands.init(authToken, game.gameID());
+            WebSocketClient ws = new WebSocketClient(wsUrl, new WebSocketClient.MessageHandler() {
+                @Override
+                public void onLoadGame(websocket.messages.LoadGameMessage msg) {
+                    state.setGame(msg.getGame());
+                    state.markRedraw();
+                }
 
-            // CONNECT message
+                @Override
+                public void onNotification(websocket.messages.NotificationMessage msg) {
+                    System.out.println("[NOTIFY] " + msg.getMessage());
+                }
+
+                @Override
+                public void onError(websocket.messages.ErrorMessage msg) {
+                    System.out.println("[ERROR] " + msg.getErrorMessage());
+                }
+            });
+
             ws.sendConnect(authToken, game.gameID());
 
-            // Start gameplay UI loop
-            GameplayUI gameplay = new GameplayUI(ws, state, scanner);
-            gameplay.run();
+            GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
+            ui.run();
 
             ws.close();
 
-        } catch (Exception e) {
-            System.out.println("Failed to start gameplay mode: " + e.getMessage());
+        } catch (Exception ex) {
+            System.out.println("Failed to start gameplay: " + ex.getMessage());
         }
     }
 
@@ -244,7 +249,6 @@ public class PostloginUI {
     }
 
     private void handleObserve(String[] parts, String authToken) {
-
         if (parts.length < 2) {
             System.out.println("Usage: observe <GAME_NUMBER>");
             return;
@@ -268,7 +272,7 @@ public class PostloginUI {
             return;
         }
 
-        var game = lastListedGames.get(index - 1);
+        GameData game = lastListedGames.get(index - 1);
 
         System.out.println("Observing game \"" + game.gameName() + "\"");
 
@@ -276,22 +280,36 @@ public class PostloginUI {
 
         try {
             String wsUrl = "ws://localhost:8080/ws";
-            WebSocketClient ws = new WebSocketClient(wsUrl, null);
 
             GameplayState state = new GameplayState(whitePerspective);
-            ws.attachState(state);
 
-            GameplayCommands.init(authToken, game.gameID());
+            WebSocketClient ws = new WebSocketClient(wsUrl, new WebSocketClient.MessageHandler() {
+                @Override
+                public void onLoadGame(websocket.messages.LoadGameMessage msg) {
+                    state.setGame(msg.getGame());
+                    state.markRedraw();
+                }
+
+                @Override
+                public void onNotification(websocket.messages.NotificationMessage msg) {
+                    System.out.println("[NOTIFY] " + msg.getMessage());
+                }
+
+                @Override
+                public void onError(websocket.messages.ErrorMessage msg) {
+                    System.out.println("[ERROR] " + msg.getErrorMessage());
+                }
+            });
 
             ws.sendConnect(authToken, game.gameID());
 
-            GameplayUI gameplay = new GameplayUI(ws, state, scanner);
-            gameplay.run();
+            GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
+            ui.run();
 
             ws.close();
 
-        } catch (Exception e) {
-            System.out.println("Failed to enter observe mode: " + e.getMessage());
+        } catch (Exception ex) {
+            System.out.println("Failed to observe: " + ex.getMessage());
         }
     }
 
