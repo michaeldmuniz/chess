@@ -41,8 +41,5 @@ public class GameplayCommands {
                 token, gameId
         );
     }
-    public static void sendHighlight(WebSocketClient ws, String authToken, int gameID, ChessPosition pos) {
-        ws.sendHighlight(authToken, gameID, pos);
-    }
 
 }

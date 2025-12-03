@@ -111,10 +111,10 @@ public class WebSocketHandler {
 
             if (username.equals(game.whiteUsername())) {
                 updated = new GameData(game.gameID(), null, game.blackUsername(),
-                        game.gameName(), game.game(), game.gameOver(), null, null);
+                        game.gameName(), game.game(), game.gameOver());
             } else if (username.equals(game.blackUsername())) {
                 updated = new GameData(game.gameID(), game.whiteUsername(), null,
-                        game.gameName(), game.game(), game.gameOver(), null, null);
+                        game.gameName(), game.game(), game.gameOver());
             }
 
             if (updated != game) dao.updateGame(updated);
@@ -186,7 +186,7 @@ public class WebSocketHandler {
 
             GameData updated = new GameData(gameID,
                     gameData.whiteUsername(), gameData.blackUsername(), gameData.gameName(),
-                    game, gameData.gameOver(), null, null);
+                    game, gameData.gameOver());
 
             dao.updateGame(updated);
 
@@ -204,7 +204,7 @@ public class WebSocketHandler {
 
                 dao.updateGame(new GameData(gameID,
                         gameData.whiteUsername(), gameData.blackUsername(),
-                        gameData.gameName(), game, true, null, null));
+                        gameData.gameName(), game, true));
             }
 
         } catch (Exception e) {
@@ -246,7 +246,7 @@ public class WebSocketHandler {
 
             dao.updateGame(new GameData(gameID,
                     game.whiteUsername(), game.blackUsername(), game.gameName(),
-                    game.game(), true, null, null));
+                    game.game(), true));
 
             NotificationMessage msg = new NotificationMessage(username + " resigned");
             manager.sendToSession(ctx.sessionId(), msg);
@@ -280,8 +280,7 @@ public class WebSocketHandler {
 
             GameData updated = new GameData(gameID,
                     game.whiteUsername(), game.blackUsername(),
-                    game.gameName(), game.game(), game.gameOver(),
-                    pos, valid);
+                    game.gameName(), game.game(), game.gameOver());
 
             dao.updateGame(updated);
 

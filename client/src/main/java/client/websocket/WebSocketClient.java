@@ -1,11 +1,9 @@
 package client.websocket;
 
-import chess.ChessPosition;
 import com.google.gson.Gson;
 import jakarta.websocket.*;
 
 import client.gameplay.GameplayState;
-import websocket.commands.HighlightCommand;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import websocket.messages.LoadGameMessage;
@@ -14,7 +12,6 @@ import websocket.messages.ErrorMessage;
 
 import java.io.IOException;
 import java.net.URI;
-
 
 @ClientEndpoint
 public class WebSocketClient {
@@ -68,23 +65,30 @@ public class WebSocketClient {
                         gameplayState.setGame(load.getGame());
                     }
 
-                    handler.onLoadGame(load);
+                    if (handler != null) {
+                        handler.onLoadGame(load);
+                    }
                 }
 
                 case NOTIFICATION -> {
-                    NotificationMessage note =
-                            gson.fromJson(json, NotificationMessage.class);
+                    NotificationMessage note = gson.fromJson(json, NotificationMessage.class);
                     System.out.println("[WS] NOTIFICATION: " + note.getMessage());
-                    handler.onNotification(note);
+
+                    if (handler != null) {
+                        handler.onNotification(note);
+                    }
                 }
 
                 case ERROR -> {
-                    ErrorMessage err =
-                            gson.fromJson(json, ErrorMessage.class);
+                    ErrorMessage err = gson.fromJson(json, ErrorMessage.class);
                     System.out.println("[WS] ERROR: " + err.getErrorMessage());
-                    handler.onError(err);
+
+                    if (handler != null) {
+                        handler.onError(err);
+                    }
                 }
             }
+
         } catch (Exception e) {
             System.out.println("[WS] Failed to parse message: " + e.getMessage());
         }
@@ -103,7 +107,7 @@ public class WebSocketClient {
 
     public void sendCommand(UserGameCommand cmd) {
         if (session == null || !session.isOpen()) {
-            System.out.println("[WS] Cannot send; session is not open");
+            System.out.println("[WS] Cannot send; session not open");
             return;
         }
         String json = gson.toJson(cmd);
@@ -123,12 +127,7 @@ public class WebSocketClient {
         if (session != null && session.isOpen()) {
             try {
                 session.close();
-            } catch (IOException ignored) {}
+            } catch (IOException ignore) {}
         }
     }
-    public void sendHighlight(String authToken, int gameID, ChessPosition pos) {
-        HighlightCommand cmd = new HighlightCommand(authToken, gameID, pos);
-        sendCommand(cmd);
-    }
-
 }

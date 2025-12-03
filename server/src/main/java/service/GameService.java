@@ -37,9 +37,7 @@ public class GameService {
                 null,
                 gameName,
                 newGame,
-                false,
-                null,
-                null
+                false
         );
 
         return dao.createGame(gameData);
@@ -75,12 +73,12 @@ public class GameService {
             if (game.whiteUsername() != null) {
                 throw new DataAccessException("already taken");
             }
-            game = new GameData(game.gameID(), username, game.blackUsername(), game.gameName(), game.game(),false,null,null);
+            game = new GameData(game.gameID(), username, game.blackUsername(), game.gameName(), game.game(),false);
         } else if (playerColor.equalsIgnoreCase("BLACK")) {
             if (game.blackUsername() != null) {
                 throw new DataAccessException("already taken");
             }
-            game = new GameData(game.gameID(), game.whiteUsername(), username, game.gameName(), game.game(),false,null,null);
+            game = new GameData(game.gameID(), game.whiteUsername(), username, game.gameName(), game.game(),false);
         } else {
             throw new DataAccessException("bad request");
         }

@@ -6,11 +6,9 @@ import client.dto.JoinGameRequest;
 import client.dto.ListGamesRequest;
 import client.dto.ListGamesResponse;
 import model.GameData;
+
 import client.websocket.WebSocketClient;
 import client.gameplay.GameplayState;
-import client.ui.GameplayUI;
-import client.ui.GameplayCommands;
-
 
 import java.io.IOException;
 import java.util.List;
@@ -20,13 +18,14 @@ public class PostloginUI {
 
     private final ServerFacade server;
     private final Scanner scanner;
-    private final String currentUsername;   // ★ Added
+    private final String currentUsername;
+
     private List<GameData> lastListedGames = List.of();
 
     public PostloginUI(ServerFacade server, Scanner scanner, String currentUsername) {
         this.server = server;
         this.scanner = scanner;
-        this.currentUsername = currentUsername;   // ★ Store logged-in username
+        this.currentUsername = currentUsername;
     }
 
     public PostloginResult runOnce(String authToken) {
@@ -35,46 +34,23 @@ public class PostloginUI {
         System.out.print("[LOGGED_IN] >>> ");
         String line = scanner.nextLine().trim();
 
-        if (line.isEmpty()) {
-            return result;
-        }
+        if (line.isEmpty()) return result;
 
         String[] parts = line.split("\\s+");
         String cmd = parts[0].toLowerCase();
 
         switch (cmd) {
-            case "help":
-                printHelp();
-                return result;
-
-            case "logout":
-                handleLogout(authToken, result);
-                return result;
-
-            case "list":
-                handleListGames(authToken);
-                return result;
-
-            case "create":
-                handleCreate(authToken);
-                return result;
-
-            case "play":
-                handlePlay(parts, authToken, result);
-                return result;
-
-            case "observe":
-                handleObserve(parts, authToken);
-                return result;
-
-            case "quit":
-                result.quit = true;
-                return result;
-
-            default:
-                System.out.println("Unknown command. Type 'help'.");
-                return result;
+            case "help" -> printHelp();
+            case "logout" -> handleLogout(authToken, result);
+            case "list" -> handleListGames(authToken);
+            case "create" -> handleCreate(authToken);
+            case "play" -> handlePlay(parts, authToken);
+            case "observe" -> handleObserve(parts, authToken);
+            case "quit" -> result.quit = true;
+            default -> System.out.println("Unknown command. Type 'help'.");
         }
+
+        return result;
     }
 
     private void handleLogout(String authToken, PostloginResult out) {
@@ -92,32 +68,24 @@ public class PostloginUI {
             ListGamesRequest req = new ListGamesRequest(authToken);
             ListGamesResponse res = server.listGames(req);
 
-            List<GameData> games = res.games();
-            this.lastListedGames = games;
+            lastListedGames = res.games();
 
-            if (games == null || games.isEmpty()) {
+            if (lastListedGames == null || lastListedGames.isEmpty()) {
                 System.out.println("No games found.");
                 return;
             }
 
-            int num = 1;
-            for (GameData g : games) {
+            int i = 1;
+            for (GameData g : lastListedGames) {
+                String white = g.whiteUsername() == null ? "-" : g.whiteUsername();
+                String black = g.blackUsername() == null ? "-" : g.blackUsername();
 
-                String white = (g.whiteUsername() == null)
-                        ? "-" : g.whiteUsername();
-
-                String black = (g.blackUsername() == null)
-                        ? "-" : g.blackUsername();
-
-                System.out.println(num + ". \"" + g.gameName() +
-                        "\"   white=" + white +
-                        "   black=" + black);
-
-                num++;
+                System.out.println(i + ". \"" + g.gameName() + "\" white=" + white + " black=" + black);
+                i++;
             }
 
-        } catch (IOException ex) {
-            System.out.println("Error: " + ex.getMessage());
+        } catch (Exception e) {
+            System.out.println("Error listing games: " + e.getMessage());
         }
     }
 
@@ -131,16 +99,15 @@ public class PostloginUI {
         }
 
         try {
-            var req = new CreateGameRequest(name, authToken);
-            var resp = server.createGame(req);
-            System.out.println("Successfully created game: " + name);
-        } catch (Exception ex) {
-            System.out.println("Error: " + ex.getMessage());
+            CreateGameRequest req = new CreateGameRequest(name, authToken);
+            server.createGame(req);
+            System.out.println("Created game \"" + name + "\"");
+        } catch (Exception e) {
+            System.out.println("Error creating game: " + e.getMessage());
         }
-
     }
 
-    private void handlePlay(String[] parts, String authToken, PostloginResult out) {
+    private void handlePlay(String[] parts, String authToken) {
         if (parts.length < 3) {
             System.out.println("Usage: play <GAME_NUMBER> <WHITE|BLACK>");
             return;
@@ -149,13 +116,8 @@ public class PostloginUI {
         int index;
         try {
             index = Integer.parseInt(parts[1]);
-        } catch (NumberFormatException ex) {
-            System.out.println("Game number must be an integer.");
-            return;
-        }
-
-        if (lastListedGames == null || lastListedGames.isEmpty()) {
-            System.out.println("No games loaded. Run 'list' first.");
+        } catch (Exception e) {
+            System.out.println("Invalid game number.");
             return;
         }
 
@@ -166,37 +128,39 @@ public class PostloginUI {
 
         GameData game = lastListedGames.get(index - 1);
 
-        String colorInput = parts[2].toUpperCase();
-        if (!colorInput.equals("WHITE") && !colorInput.equals("BLACK")) {
+        String color = parts[2].toUpperCase();
+        if (!color.equals("WHITE") && !color.equals("BLACK")) {
             System.out.println("Color must be WHITE or BLACK.");
             return;
         }
 
         boolean whitePerspective;
 
-        if (colorInput.equals("WHITE") &&
-                currentUsername.equals(game.whiteUsername())) {
-            System.out.println("Re-entering game as WHITE...");
+        // Re-entering game
+        if (color.equals("WHITE") && currentUsername.equals(game.whiteUsername())) {
+            System.out.println("Re-entering as WHITE...");
             whitePerspective = true;
 
-        } else if (colorInput.equals("BLACK") &&
-                currentUsername.equals(game.blackUsername())) {
-            System.out.println("Re-entering game as BLACK...");
+        } else if (color.equals("BLACK") && currentUsername.equals(game.blackUsername())) {
+            System.out.println("Re-entering as BLACK...");
             whitePerspective = false;
 
         } else {
+            // Must join the game via HTTP
             try {
-                JoinGameRequest req = new JoinGameRequest(colorInput, game.gameID());
-                server.joinGame(req, authToken);
-                System.out.println("Joined game as " + colorInput);
-            } catch (IOException ex) {
-                System.out.println("Join failed: " + ex.getMessage());
+                server.joinGame(new JoinGameRequest(color, game.gameID()), authToken);
+                System.out.println("Joined game as " + color);
+            } catch (Exception e) {
+                System.out.println("Join failed: " + e.getMessage());
                 return;
             }
-
-            whitePerspective = colorInput.equals("WHITE");
+            whitePerspective = color.equals("WHITE");
         }
 
+        startGameplay(game, whitePerspective, authToken);
+    }
+
+    private void startGameplay(GameData game, boolean whitePerspective, String authToken) {
         try {
             String wsUrl = "ws://localhost:8080/ws";
 
@@ -206,7 +170,6 @@ public class PostloginUI {
                 @Override
                 public void onLoadGame(websocket.messages.LoadGameMessage msg) {
                     state.setGame(msg.getGame());
-                    state.markRedraw();
                 }
 
                 @Override
@@ -220,6 +183,9 @@ public class PostloginUI {
                 }
             });
 
+            ws.attachState(state);
+            ws.connect();
+
             ws.sendConnect(authToken, game.gameID());
 
             GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
@@ -227,9 +193,35 @@ public class PostloginUI {
 
             ws.close();
 
-        } catch (Exception ex) {
-            System.out.println("Failed to start gameplay: " + ex.getMessage());
+        } catch (Exception e) {
+            System.out.println("Failed to start gameplay: " + e.getMessage());
         }
+    }
+
+    private void handleObserve(String[] parts, String authToken) {
+        if (parts.length < 2) {
+            System.out.println("Usage: observe <GAME_NUMBER>");
+            return;
+        }
+
+        int index;
+        try {
+            index = Integer.parseInt(parts[1]);
+        } catch (Exception e) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+
+        if (index < 1 || index > lastListedGames.size()) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+
+        GameData game = lastListedGames.get(index - 1);
+
+        System.out.println("Observing \"" + game.gameName() + "\"");
+
+        startGameplay(game, true, authToken);
     }
 
     private void printHelp() {
@@ -243,75 +235,5 @@ public class PostloginUI {
         quit      - exit program
         """);
     }
-
-    public List<GameData> getLastListedGames() {
-        return lastListedGames;
-    }
-
-    private void handleObserve(String[] parts, String authToken) {
-        if (parts.length < 2) {
-            System.out.println("Usage: observe <GAME_NUMBER>");
-            return;
-        }
-
-        int index;
-        try {
-            index = Integer.parseInt(parts[1]);
-        } catch (NumberFormatException ex) {
-            System.out.println("Game number must be an integer.");
-            return;
-        }
-
-        if (lastListedGames == null || lastListedGames.isEmpty()) {
-            System.out.println("No games loaded. Run 'list' first.");
-            return;
-        }
-
-        if (index < 1 || index > lastListedGames.size()) {
-            System.out.println("Invalid game number.");
-            return;
-        }
-
-        GameData game = lastListedGames.get(index - 1);
-
-        System.out.println("Observing game \"" + game.gameName() + "\"");
-
-        boolean whitePerspective = true;
-
-        try {
-            String wsUrl = "ws://localhost:8080/ws";
-
-            GameplayState state = new GameplayState(whitePerspective);
-
-            WebSocketClient ws = new WebSocketClient(wsUrl, new WebSocketClient.MessageHandler() {
-                @Override
-                public void onLoadGame(websocket.messages.LoadGameMessage msg) {
-                    state.setGame(msg.getGame());
-                    state.markRedraw();
-                }
-
-                @Override
-                public void onNotification(websocket.messages.NotificationMessage msg) {
-                    System.out.println("[NOTIFY] " + msg.getMessage());
-                }
-
-                @Override
-                public void onError(websocket.messages.ErrorMessage msg) {
-                    System.out.println("[ERROR] " + msg.getErrorMessage());
-                }
-            });
-
-            ws.sendConnect(authToken, game.gameID());
-
-            GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
-            ui.run();
-
-            ws.close();
-
-        } catch (Exception ex) {
-            System.out.println("Failed to observe: " + ex.getMessage());
-        }
-    }
-
 
 }

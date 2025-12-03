@@ -10,16 +10,23 @@ import java.util.List;
 public class GameplayState {
 
     private ChessGame currentGame;
-    private boolean running = true;
     private final boolean whitePerspective;
+    private boolean running = true;
+
+    private ChessPosition highlightOrigin = null;
+    private Collection<ChessMove> highlightMoves = List.of();
+
+    private boolean redrawRequested = false;
+
 
     public GameplayState(boolean whitePerspective) {
         this.whitePerspective = whitePerspective;
     }
 
+
     public synchronized void setGame(ChessGame game) {
         this.currentGame = game;
-        markRedraw();
+        markRedraw();                // board should update when game changes
     }
 
     public synchronized ChessGame getGame() {
@@ -30,48 +37,45 @@ public class GameplayState {
         return whitePerspective;
     }
 
-    public boolean isRunning() {
+    public synchronized boolean isRunning() {
         return running;
     }
 
-    public void stop() {
+    public synchronized void stop() {
         running = false;
     }
-    private ChessPosition highlightOrigin = null;
-    private Collection<ChessMove> highlightMoves = List.of();
 
-    public ChessPosition getHighlightOrigin() {
+    public synchronized ChessPosition getHighlightOrigin() {
         return highlightOrigin;
     }
 
-    public Collection<ChessMove> getHighlightMoves() {
+    public synchronized Collection<ChessMove> getHighlightMoves() {
         return highlightMoves;
     }
 
-    public void setHighlight(ChessPosition origin, Collection<ChessMove> moves) {
+    public synchronized void setHighlight(ChessPosition origin, Collection<ChessMove> moves) {
         this.highlightOrigin = origin;
-        this.highlightMoves = moves;
+        this.highlightMoves = (moves != null ? moves : List.of());
         markRedraw();
     }
 
-    public void clearHighlight() {
+    public synchronized void clearHighlight() {
         this.highlightOrigin = null;
         this.highlightMoves = List.of();
         markRedraw();
     }
 
 
-    private boolean redrawRequested = false;
 
-    public boolean shouldRedraw() {
+    public synchronized boolean shouldRedraw() {
         return redrawRequested;
     }
 
-    public void markRedraw() {
+    public synchronized void markRedraw() {
         this.redrawRequested = true;
     }
 
-    public void clearRedraw() {
+    public synchronized void clearRedraw() {
         this.redrawRequested = false;
     }
 }
