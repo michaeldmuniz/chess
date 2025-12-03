@@ -5,6 +5,7 @@ import client.gameplay.GameplayState;
 import websocket.commands.MakeMoveCommand;
 import websocket.commands.UserGameCommand;
 import chess.*;
+
 import java.util.Scanner;
 
 public class GameplayUI {
@@ -31,7 +32,6 @@ public class GameplayUI {
     public void run() {
 
         System.out.println("Entered gameplay mode. Type 'help' for commands.");
-
         BoardPrinter printer = new BoardPrinter();
 
         while (state.isRunning()) {
@@ -57,10 +57,10 @@ public class GameplayUI {
             String cmd = parts[0].toLowerCase();
 
             switch (cmd) {
-                case "help" -> printHelp();
-                case "redraw" -> state.markRedraw();
+                case "help"       -> printHelp();
+                case "redraw"     -> state.markRedraw();
 
-                case "leave" -> {
+                case "leave"      -> {
                     ws.sendCommand(new UserGameCommand(
                             UserGameCommand.CommandType.LEAVE,
                             authToken,
@@ -69,7 +69,7 @@ public class GameplayUI {
                     state.stop();
                 }
 
-                case "resign" -> {
+                case "resign"     -> {
                     ws.sendCommand(new UserGameCommand(
                             UserGameCommand.CommandType.RESIGN,
                             authToken,
@@ -78,8 +78,8 @@ public class GameplayUI {
                     state.stop();
                 }
 
-                case "move" -> handleMove(parts);
-                case "highlight" -> handleHighlight(parts);
+                case "move"       -> handleMove(parts);
+                case "highlight"  -> handleHighlight(parts);
 
                 default -> System.out.println("Unknown command. Type 'help'");
             }
@@ -97,14 +97,9 @@ public class GameplayUI {
         try {
             ChessPosition from = parsePos(parts[1]);
             ChessPosition to = parsePos(parts[2]);
-
             ChessMove move = new ChessMove(from, to, null);
 
-            ws.sendCommand(new MakeMoveCommand(
-                    authToken,
-                    gameID,
-                    move
-            ));
+            ws.sendCommand(new MakeMoveCommand(authToken, gameID, move));
 
         } catch (Exception ex) {
             System.out.println("Invalid move. Example: move e2 e4");
@@ -119,8 +114,13 @@ public class GameplayUI {
 
         try {
             ChessPosition pos = parsePos(parts[1]);
-
             ChessGame game = state.getGame();
+
+            if (game == null) {
+                System.out.println("Board not loaded yet.");
+                return;
+            }
+
             var moves = game.validMoves(pos);
 
             if (moves == null || moves.isEmpty()) {
@@ -142,15 +142,14 @@ public class GameplayUI {
     private void printHelp() {
         System.out.println("""
             Commands:
-              help
-              redraw
-              move <FROM> <TO>
-              highlight <FROM>
-              leave
-              resign
+              help              - show this help text
+              redraw            - redraw the board
+              move <FROM> <TO>  - make a move (example: move e2 e4)
+              highlight <FROM>  - highlight legal moves
+              leave             - leave the game
+              resign            - resign from the game
         """);
     }
-
 
     private ChessPosition parsePos(String txt) {
         txt = txt.toLowerCase();
