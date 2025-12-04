@@ -39,9 +39,6 @@ public class WebSocketClient extends Endpoint {
     }
 
     public void connect() throws Exception {
-        System.out.println("[WS-DEBUG] connect() called, URL: " + wsUrl);
-        System.out.println("[WS-DEBUG] pendingAuth before connect: " + (pendingAuth != null ? "exists (gameID=" + pendingAuth.gameID + ")" : "null"));
-
         // Disable Tyrus extensions via system property to prevent opcode 7 issues
         System.setProperty("org.glassfish.tyrus.client.disableExtensions", "true");
 
@@ -50,10 +47,6 @@ public class WebSocketClient extends Endpoint {
         // Configure client properties to avoid protocol issues
         container.setDefaultMaxSessionIdleTimeout(60000);
         container.setDefaultMaxTextMessageBufferSize(65536);
-
-        System.out.println("[WS-DEBUG] Container default max idle timeout: " + container.getDefaultMaxSessionIdleTimeout());
-        System.out.println("[WS-DEBUG] Container default max text buffer: " + container.getDefaultMaxTextMessageBufferSize());
-        System.out.println("[WS-DEBUG] Connecting to server...");
 
         // Create a minimal ClientEndpointConfig with no extensions to avoid protocol issues
         ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
@@ -69,14 +62,10 @@ public class WebSocketClient extends Endpoint {
                 .build();
 
         container.connectToServer(this, config, new URI(wsUrl));
-        System.out.println("[WS-DEBUG] connect() returned");
     }
 
     @Override
     public void onOpen(Session session, EndpointConfig endpointConfig) {
-        System.out.println("[WS-DEBUG] onOpen() called");
-        System.out.println("[WS-DEBUG] Session ID: " + session.getId());
-        System.out.println("[WS-DEBUG] Session isOpen: " + session.isOpen());
         this.session = session;
         System.out.println("[WS] Connected to server");
 
@@ -88,58 +77,41 @@ public class WebSocketClient extends Endpoint {
             }
         });
 
-        System.out.println("[WS-DEBUG] pendingAuth in onOpen: " + (pendingAuth != null ? "exists (gameID=" + pendingAuth.gameID + ", authToken=" + (pendingAuth.authToken != null ? "present" : "null") + ")" : "null"));
         if (pendingAuth != null) {
-            // Wait longer to ensure Tyrus has finished any initialization frames
-            // The opcode 7 error suggests Tyrus sends something right after connection
+            // Wait to ensure Tyrus has finished any initialization frames
             new Thread(() -> {
                 try {
-                    // Wait longer to let any Tyrus initialization complete
-                    Thread.sleep(500); // Increased delay
+                    Thread.sleep(500);
                     if (session != null && session.isOpen() && pendingAuth != null) {
                         UserGameCommand cmd = new UserGameCommand(
                                 UserGameCommand.CommandType.CONNECT,
                                 pendingAuth.authToken,
                                 pendingAuth.gameID
                         );
-                        System.out.println("[WS-DEBUG] Sending CONNECT command from onOpen (delayed), gameID: " + pendingAuth.gameID);
                         sendCommand(cmd);
                         pendingAuth = null; // Clear after sending
-                    } else {
-                        System.out.println("[WS-DEBUG] Session closed before sending CONNECT");
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    System.out.println("[WS-DEBUG] Thread interrupted");
                 } catch (Exception e) {
-                    System.out.println("[WS-DEBUG] Exception sending CONNECT: " + e.getMessage());
-                    e.printStackTrace();
+                    // Silently handle exceptions
                 }
             }).start();
-        } else {
-            System.out.println("[WS-DEBUG] No pendingAuth, not sending CONNECT from onOpen");
         }
     }
 
     private void handleMessage(String json) {
-        System.out.println("[WS-DEBUG] onMessage() called");
-        System.out.println("[WS-DEBUG] Raw JSON received: " + json);
-        System.out.println("[WS-DEBUG] JSON length: " + (json != null ? json.length() : 0));
         try {
             ServerMessage base = gson.fromJson(json, ServerMessage.class);
-            System.out.println("[WS-DEBUG] Parsed ServerMessage: " + (base != null ? base.getClass().getSimpleName() : "null"));
 
             if (base == null || base.getServerMessageType() == null) {
-                System.out.println("[WS] Received message with null type: " + json);
                 return;
             }
 
-            System.out.println("[WS-DEBUG] Message type: " + base.getServerMessageType());
             switch (base.getServerMessageType()) {
 
                 case LOAD_GAME -> {
                     LoadGameMessage load = gson.fromJson(json, LoadGameMessage.class);
-                    System.out.println("[WS] LOAD_GAME received");
 
                     if (gameplayState != null) {
                         gameplayState.setGame(load.getGame());
@@ -152,7 +124,6 @@ public class WebSocketClient extends Endpoint {
 
                 case NOTIFICATION -> {
                     NotificationMessage note = gson.fromJson(json, NotificationMessage.class);
-                    System.out.println("[WS] NOTIFICATION: " + note.getMessage());
 
                     if (handler != null) {
                         handler.onNotification(note);
@@ -161,21 +132,15 @@ public class WebSocketClient extends Endpoint {
 
                 case ERROR -> {
                     ErrorMessage err = gson.fromJson(json, ErrorMessage.class);
-                    System.out.println("[WS] ERROR: " + err.getErrorMessage());
 
                     if (handler != null) {
                         handler.onError(err);
                     }
                 }
-
-                default -> {
-                    System.out.println("[WS] Unknown message type: " + base.getServerMessageType());
-                }
             }
 
         } catch (Exception e) {
-            System.out.println("[WS] Failed to parse message: " + e.getMessage());
-            e.printStackTrace();
+            // Silently handle parsing errors
         }
     }
 
@@ -183,55 +148,31 @@ public class WebSocketClient extends Endpoint {
     // We can add listeners if needed, but the Endpoint base class handles these
 
     public void sendCommand(UserGameCommand cmd) {
-        System.out.println("[WS-DEBUG] sendCommand() called");
-        System.out.println("[WS-DEBUG] Command type: " + (cmd != null ? cmd.getCommandType() : "null"));
-        System.out.println("[WS-DEBUG] Session: " + (session != null ? "exists" : "null"));
-        System.out.println("[WS-DEBUG] Session isOpen: " + (session != null ? session.isOpen() : "N/A"));
-
         if (session == null || !session.isOpen()) {
-            System.out.println("[WS] Cannot send; session not open");
             return;
         }
         try {
             String json = gson.toJson(cmd);
-            System.out.println("[WS-DEBUG] Sending JSON: " + json);
-            System.out.println("[WS-DEBUG] Using getBasicRemote().sendText()");
             session.getBasicRemote().sendText(json);
-            System.out.println("[WS-DEBUG] sendText() completed successfully");
         } catch (IOException e) {
-            System.out.println("[WS-DEBUG] IOException in sendCommand: " + e.getMessage());
-            System.out.println("[WS] Failed to send command: " + e.getMessage());
-            e.printStackTrace();
+            // Silently handle send errors
         } catch (Exception e) {
-            System.out.println("[WS-DEBUG] Unexpected exception in sendCommand: " + e.getMessage());
-            e.printStackTrace();
+            // Silently handle send errors
         }
     }
 
     public void sendConnect(String authToken, int gameID) {
-        System.out.println("[WS-DEBUG] sendConnect() called");
-        System.out.println("[WS-DEBUG] gameID: " + gameID);
-        System.out.println("[WS-DEBUG] authToken: " + (authToken != null ? "present (length=" + authToken.length() + ")" : "null"));
-
         pendingAuth = new PendingConnect();
         pendingAuth.authToken = authToken;
         pendingAuth.gameID = gameID;
-        System.out.println("[WS-DEBUG] Set pendingAuth with gameID: " + gameID);
-
-        System.out.println("[WS-DEBUG] Checking if session is ready...");
-        System.out.println("[WS-DEBUG] session: " + (session != null ? "exists" : "null"));
-        System.out.println("[WS-DEBUG] session.isOpen: " + (session != null ? session.isOpen() : "N/A"));
 
         if (session != null && session.isOpen()) {
-            System.out.println("[WS-DEBUG] Session is open, sending CONNECT immediately");
             UserGameCommand cmd = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
                     authToken,
                     gameID
             );
             sendCommand(cmd);
-        } else {
-            System.out.println("[WS-DEBUG] Session not ready, will send CONNECT from onOpen()");
         }
     }
 

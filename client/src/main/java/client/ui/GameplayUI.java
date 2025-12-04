@@ -34,6 +34,8 @@ public class GameplayUI {
         System.out.println("Entered gameplay mode. Type 'help' for commands.");
         BoardPrinter printer = new BoardPrinter();
 
+        state.markRedraw();
+
         while (state.isRunning()) {
 
             if (state.shouldRedraw()) {

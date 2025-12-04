@@ -54,11 +54,8 @@ public class Server {
     }
 
     public int run(int desiredPort) {
-        System.out.println("[SERVER] Starting server on port " + desiredPort + "...");
         javalin.start(desiredPort);
-        int actualPort = javalin.port();
-        System.out.println("[SERVER] Server started successfully on port " + actualPort);
-        return actualPort;
+        return javalin.port();
     }
 
     public void stop() {
