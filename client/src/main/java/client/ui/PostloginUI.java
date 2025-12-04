@@ -162,7 +162,7 @@ public class PostloginUI {
 
     private void startGameplay(GameData game, boolean whitePerspective, String authToken) {
         try {
-            String wsUrl = "ws://localhost:8080/ws";
+            String wsUrl = "ws://localhost:8081/ws";  // Changed from 8080 to match server
 
             GameplayState state = new GameplayState(whitePerspective);
 
@@ -170,6 +170,7 @@ public class PostloginUI {
                 @Override
                 public void onLoadGame(websocket.messages.LoadGameMessage msg) {
                     state.setGame(msg.getGame());
+                    state.markRedraw();   // ⭐ required for UI to update
                 }
 
                 @Override
@@ -184,9 +185,8 @@ public class PostloginUI {
             });
 
             ws.attachState(state);
-            ws.connect();
-
-            ws.sendConnect(authToken, game.gameID());
+            ws.sendConnect(authToken, game.gameID()); // Set pending auth before connecting
+            ws.connect(); // Connect will send the command when ready
 
             GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
             ui.run();
@@ -209,6 +209,11 @@ public class PostloginUI {
             index = Integer.parseInt(parts[1]);
         } catch (Exception e) {
             System.out.println("Invalid game number.");
+            return;
+        }
+
+        if (lastListedGames == null || lastListedGames.isEmpty()) {
+            System.out.println("No games loaded. Run 'list' first.");
             return;
         }
 

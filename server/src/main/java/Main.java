@@ -12,8 +12,12 @@ public class Main {
         }
 
         Server server = new Server();
-        server.run(8080);
+        int port = server.run(8081);  // Changed from 8080 to avoid macOS Sonoma WebSocket issue
 
+        System.out.println("========================================");
         System.out.println("240 Chess Server");
+        System.out.println("Server running on port: " + port);
+        System.out.println("WebSocket endpoint: ws://localhost:" + port + "/ws");
+        System.out.println("========================================");
     }
 }

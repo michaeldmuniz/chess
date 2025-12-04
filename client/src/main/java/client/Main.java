@@ -9,7 +9,7 @@ public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        String url = "http://localhost:8080";
+        String url = "http://localhost:8081";  // Changed from 8080 to match server
         ServerFacade server = new ServerFacade(url);
 
         PreloginUI prelogin = new PreloginUI(server, scanner);
