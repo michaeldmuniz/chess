@@ -119,8 +119,14 @@ public class WebSocketHandler {
 
             manager.sendToSession(ctx.sessionId(), new LoadGameMessage(game.game()));
 
-            manager.broadcastToGameExcept(ctx, gameID,
-                    new NotificationMessage(username + " connected to game"));
+            // Send appropriate notification based on role
+            String notification;
+            if ("observer".equals(role)) {
+                notification = username + " connected to the game as an observer";
+            } else {
+                notification = username + " connected to the game as " + role;
+            }
+            manager.broadcastToGameExcept(ctx, gameID, new NotificationMessage(notification));
 
         } catch (Exception e) {
             sendError(ctx, "Error: " + e.getMessage());
@@ -231,17 +237,50 @@ public class WebSocketHandler {
             manager.sendToSession(ctx.sessionId(), new LoadGameMessage(game));
 
             manager.broadcastToGameExcept(ctx, gameID, new LoadGameMessage(game));
+
+            // Format move description
+            String moveDescription = formatMove(move, piece);
             manager.broadcastToGameExcept(ctx, gameID,
-                    new NotificationMessage(username + " made a move"));
+                    new NotificationMessage(username + " made a move: " + moveDescription));
 
-            if (game.isInCheckmate(ChessGame.TeamColor.WHITE)
-                    || game.isInCheckmate(ChessGame.TeamColor.BLACK)) {
-
-                manager.broadcastToGame(gameID, new NotificationMessage("Checkmate!"));
-
+            // Check for checkmate first (checkmate implies check, so only send checkmate notification)
+            if (game.isInCheckmate(ChessGame.TeamColor.WHITE)) {
+                String playerName = gameData.whiteUsername();
+                manager.broadcastToGame(gameID,
+                        new NotificationMessage(playerName + " is in checkmate"));
                 dao.updateGame(new GameData(gameID,
                         gameData.whiteUsername(), gameData.blackUsername(),
                         gameData.gameName(), game, true));
+            } else if (game.isInCheckmate(ChessGame.TeamColor.BLACK)) {
+                String playerName = gameData.blackUsername();
+                manager.broadcastToGame(gameID,
+                        new NotificationMessage(playerName + " is in checkmate"));
+                dao.updateGame(new GameData(gameID,
+                        gameData.whiteUsername(), gameData.blackUsername(),
+                        gameData.gameName(), game, true));
+            } else if (game.isInStalemate(ChessGame.TeamColor.WHITE)) {
+                String playerName = gameData.whiteUsername();
+                manager.broadcastToGame(gameID,
+                        new NotificationMessage(playerName + " is in stalemate"));
+                dao.updateGame(new GameData(gameID,
+                        gameData.whiteUsername(), gameData.blackUsername(),
+                        gameData.gameName(), game, true));
+            } else if (game.isInStalemate(ChessGame.TeamColor.BLACK)) {
+                String playerName = gameData.blackUsername();
+                manager.broadcastToGame(gameID,
+                        new NotificationMessage(playerName + " is in stalemate"));
+                dao.updateGame(new GameData(gameID,
+                        gameData.whiteUsername(), gameData.blackUsername(),
+                        gameData.gameName(), game, true));
+            } else {
+                // Only send check notification if not in checkmate or stalemate
+                ChessGame.TeamColor currentTurn = game.getTeamTurn();
+                if (game.isInCheck(currentTurn)) {
+                    String playerName = (currentTurn == ChessGame.TeamColor.WHITE)
+                            ? gameData.whiteUsername() : gameData.blackUsername();
+                    manager.broadcastToGame(gameID,
+                            new NotificationMessage(playerName + " is in check"));
+                }
             }
 
         } catch (Exception e) {
@@ -328,6 +367,35 @@ public class WebSocketHandler {
             sendError(ctx, "Error: " + e.getMessage());
         }
     }
+    private String formatMove(chess.ChessMove move, chess.ChessPiece piece) {
+        String from = positionToAlgebraic(move.getStartPosition());
+        String to = positionToAlgebraic(move.getEndPosition());
+        String pieceName = pieceTypeToName(piece.getPieceType());
+
+        String promotion = "";
+        if (move.getPromotionPiece() != null) {
+            promotion = " promoting to " + pieceTypeToName(move.getPromotionPiece());
+        }
+
+        return pieceName + " from " + from + " to " + to + promotion;
+    }
+
+    private String positionToAlgebraic(chess.ChessPosition pos) {
+        char col = (char) ('a' + pos.getColumn() - 1);
+        return "" + col + pos.getRow();
+    }
+
+    private String pieceTypeToName(chess.ChessPiece.PieceType type) {
+        return switch (type) {
+            case KING -> "King";
+            case QUEEN -> "Queen";
+            case ROOK -> "Rook";
+            case BISHOP -> "Bishop";
+            case KNIGHT -> "Knight";
+            case PAWN -> "Pawn";
+        };
+    }
+
     private void sendError(WsContext ctx, String msg) {
         if (!msg.startsWith("Error")) msg = "Error: " + msg;
         ctx.send(gson.toJson(new ErrorMessage(msg)));

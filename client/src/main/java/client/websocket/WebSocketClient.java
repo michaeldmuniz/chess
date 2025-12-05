@@ -67,7 +67,7 @@ public class WebSocketClient extends Endpoint {
     @Override
     public void onOpen(Session session, EndpointConfig endpointConfig) {
         this.session = session;
-        System.out.println("[WS] Connected to server");
+        System.out.println("Connected to server");
 
         // Register message handler as shown in documentation
         session.addMessageHandler(new jakarta.websocket.MessageHandler.Whole<String>() {
@@ -144,8 +144,6 @@ public class WebSocketClient extends Endpoint {
         }
     }
 
-    // Note: onClose and onError are handled by the Session's CloseHandler and ErrorHandler
-    // We can add listeners if needed, but the Endpoint base class handles these
 
     public void sendCommand(UserGameCommand cmd) {
         if (session == null || !session.isOpen()) {

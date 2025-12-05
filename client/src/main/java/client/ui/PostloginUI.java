@@ -175,12 +175,12 @@ public class PostloginUI {
 
                 @Override
                 public void onNotification(websocket.messages.NotificationMessage msg) {
-                    System.out.println("[NOTIFY] " + msg.getMessage());
+                    System.out.println(msg.getMessage());
                 }
 
                 @Override
                 public void onError(websocket.messages.ErrorMessage msg) {
-                    System.out.println("[ERROR] " + msg.getErrorMessage());
+                    System.out.println(msg.getErrorMessage());
                 }
             });
 
