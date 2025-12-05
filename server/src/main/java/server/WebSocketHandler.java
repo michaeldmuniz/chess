@@ -64,9 +64,33 @@ public class WebSocketHandler {
     private void routeCommand(WsContext ctx, UserGameCommand cmd, String rawJson) {
         switch (cmd.getCommandType()) {
             case CONNECT -> handleConnect(ctx, cmd);
-            case MAKE_MOVE -> handleMakeMove(ctx, gson.fromJson(rawJson, MakeMoveCommand.class));
+            case MAKE_MOVE -> {
+                // Check if user is connected and not an observer
+                String role = manager.getRole(ctx);
+                if (role == null) {
+                    sendError(ctx, "Error: not connected");
+                    return;
+                }
+                if ("observer".equals(role)) {
+                    sendError(ctx, "Error: observers cannot move");
+                    return;
+                }
+                handleMakeMove(ctx, gson.fromJson(rawJson, MakeMoveCommand.class));
+            }
             case LEAVE -> handleLeave(ctx, cmd);
-            case RESIGN -> handleResign(ctx, cmd);
+            case RESIGN -> {
+                // Check if user is connected and not an observer
+                String role = manager.getRole(ctx);
+                if (role == null) {
+                    sendError(ctx, "Error: not connected");
+                    return;
+                }
+                if ("observer".equals(role)) {
+                    sendError(ctx, "Error: observers cannot resign");
+                    return;
+                }
+                handleResign(ctx, cmd);
+            }
             case HIGHLIGHT -> handleHighlight(ctx, gson.fromJson(rawJson, HighlightCommand.class));
         }
     }

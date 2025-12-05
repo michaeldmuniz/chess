@@ -36,6 +36,30 @@ public class GameplayUI {
 
         state.markRedraw();
 
+        // Wait briefly for game to load, then draw board immediately
+        for (int i = 0; i < 10 && state.getGame() == null; i++) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        // Draw board immediately if game is loaded
+        if (state.shouldRedraw()) {
+            ChessGame game = state.getGame();
+            if (game != null) {
+                printer.drawBoard(
+                        game,
+                        state.isWhitePerspective(),
+                        state.getHighlightOrigin(),
+                        state.getHighlightMoves()
+                );
+            }
+            state.clearRedraw();
+        }
+
         while (state.isRunning()) {
 
             if (state.shouldRedraw()) {
@@ -71,14 +95,7 @@ public class GameplayUI {
                     state.stop();
                 }
 
-                case "resign"     -> {
-                    ws.sendCommand(new UserGameCommand(
-                            UserGameCommand.CommandType.RESIGN,
-                            authToken,
-                            gameID
-                    ));
-                    state.stop();
-                }
+                case "resign"     -> handleResign();
 
                 case "move"       -> handleMove(parts);
                 case "highlight"  -> handleHighlight(parts);
@@ -96,6 +113,12 @@ public class GameplayUI {
             return;
         }
 
+        // Check if game is over
+        if (isGameOver()) {
+            System.out.println("Error: game is over. You can only observe now.");
+            return;
+        }
+
         try {
             ChessPosition from = parsePos(parts[1]);
             ChessPosition to = parsePos(parts[2]);
@@ -105,6 +128,28 @@ public class GameplayUI {
 
         } catch (Exception ex) {
             System.out.println("Invalid move. Example: move e2 e4");
+        }
+    }
+
+    private void handleResign() {
+        // Check if game is already over
+        if (isGameOver()) {
+            System.out.println("Error: game is already over.");
+            return;
+        }
+
+        System.out.print("Are you sure you want to resign? (yes/no): ");
+        String confirmation = scanner.nextLine().trim().toLowerCase();
+
+        if (confirmation.equals("yes") || confirmation.equals("y")) {
+            ws.sendCommand(new UserGameCommand(
+                    UserGameCommand.CommandType.RESIGN,
+                    authToken,
+                    gameID
+            ));
+            System.out.println("You have resigned. The game is over.");
+        } else {
+            System.out.println("Resignation cancelled.");
         }
     }
 
@@ -151,6 +196,18 @@ public class GameplayUI {
               leave             - leave the game
               resign            - resign from the game
         """);
+    }
+
+    private boolean isGameOver() {
+        ChessGame game = state.getGame();
+        if (game == null) {
+            return false;
+        }
+        // Game is over if either team is in checkmate or stalemate
+        return game.isInCheckmate(ChessGame.TeamColor.WHITE) ||
+                game.isInCheckmate(ChessGame.TeamColor.BLACK) ||
+                game.isInStalemate(ChessGame.TeamColor.WHITE) ||
+                game.isInStalemate(ChessGame.TeamColor.BLACK);
     }
 
     private ChessPosition parsePos(String txt) {

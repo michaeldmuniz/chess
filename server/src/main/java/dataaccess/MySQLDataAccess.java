@@ -52,10 +52,38 @@ public class MySQLDataAccess implements DataAccess {
                      whiteUsername VARCHAR(50),
                      blackUsername VARCHAR(50),
                      gameName VARCHAR(100) NOT NULL,
-                     gameJSON TEXT NOT NULL
+                     gameJSON TEXT NOT NULL,
+                     gameOver BOOLEAN NOT NULL DEFAULT FALSE
                  )
             """)) {
                 gameStmt.executeUpdate();
+            }
+
+            // Add gameOver column to existing tables if it doesn't exist
+            try (var checkStmt = conn.prepareStatement("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'game' 
+                AND COLUMN_NAME = 'gameOver'
+            """)) {
+                var rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) == 0) {
+                    // Column doesn't exist, add it
+                    try (var alterStmt = conn.prepareStatement("""
+                        ALTER TABLE game ADD COLUMN gameOver BOOLEAN NOT NULL DEFAULT FALSE
+                    """)) {
+                        alterStmt.executeUpdate();
+                    }
+                }
+            } catch (SQLException e) {
+                // If we can't check, try to add the column anyway (might fail if it exists)
+                try (var alterStmt = conn.prepareStatement("""
+                    ALTER TABLE game ADD COLUMN gameOver BOOLEAN NOT NULL DEFAULT FALSE
+                """)) {
+                    alterStmt.executeUpdate();
+                } catch (SQLException e2) {
+                    // Column might already exist, ignore error
+                }
             }
 
             System.out.println("Tables verified for database: " + dbName);
@@ -184,7 +212,7 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public int createGame(GameData game) throws DataAccessException {
-        final String sql = "INSERT INTO game (whiteUsername, blackUsername, gameName, gameJSON) VALUES (?, ?, ?, ?)";
+        final String sql = "INSERT INTO game (whiteUsername, blackUsername, gameName, gameJSON, gameOver) VALUES (?, ?, ?, ?, ?)";
 
         String json = gson.toJson(game.game());
 
@@ -195,6 +223,7 @@ public class MySQLDataAccess implements DataAccess {
             stmt.setString(2, game.blackUsername());
             stmt.setString(3, game.gameName());
             stmt.setString(4, json);
+            stmt.setBoolean(5, game.gameOver());
             stmt.executeUpdate();
 
             try (var keys = stmt.getGeneratedKeys()) {
@@ -220,13 +249,20 @@ public class MySQLDataAccess implements DataAccess {
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     ChessGame gameObj = gson.fromJson(rs.getString("gameJSON"), ChessGame.class);
+                    // Handle case where gameOver column might not exist (for backwards compatibility)
+                    boolean gameOver = false;
+                    try {
+                        gameOver = rs.getBoolean("gameOver");
+                    } catch (SQLException e) {
+                        // Column doesn't exist, use default false
+                    }
                     return new GameData(
                             rs.getInt("gameID"),
                             rs.getString("whiteUsername"),
                             rs.getString("blackUsername"),
                             rs.getString("gameName"),
                             gameObj,
-                            false
+                            gameOver
                     );
                 }
                 return null;
@@ -248,13 +284,20 @@ public class MySQLDataAccess implements DataAccess {
 
             while (rs.next()) {
                 ChessGame gameObj = gson.fromJson(rs.getString("gameJSON"), ChessGame.class);
+                // Handle case where gameOver column might not exist (for backwards compatibility)
+                boolean gameOver = false;
+                try {
+                    gameOver = rs.getBoolean("gameOver");
+                } catch (SQLException e) {
+                    // Column doesn't exist, use default false
+                }
                 games.add(new GameData(
                         rs.getInt("gameID"),
                         rs.getString("whiteUsername"),
                         rs.getString("blackUsername"),
                         rs.getString("gameName"),
                         gameObj,
-                        false
+                        gameOver
                 ));
             }
 
@@ -267,7 +310,7 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void updateGame(GameData updated) throws DataAccessException {
-        final String sql = "UPDATE game SET whiteUsername=?, blackUsername=?, gameName=?, gameJSON=? WHERE gameID=?";
+        final String sql = "UPDATE game SET whiteUsername=?, blackUsername=?, gameName=?, gameJSON=?, gameOver=? WHERE gameID=?";
 
         try (var conn = DatabaseManager.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -276,7 +319,8 @@ public class MySQLDataAccess implements DataAccess {
             stmt.setString(2, updated.blackUsername());
             stmt.setString(3, updated.gameName());
             stmt.setString(4, gson.toJson(updated.game()));
-            stmt.setInt(5, updated.gameID());
+            stmt.setBoolean(5, updated.gameOver());
+            stmt.setInt(6, updated.gameID());
 
             if (stmt.executeUpdate() != 1) {
                 throw new DataAccessException("No game updated — check gameID");
