@@ -16,17 +16,20 @@ public class GameplayUI {
 
     private final String authToken;
     private final int gameID;
+    private final boolean isObserver;
 
     public GameplayUI(WebSocketClient ws,
                       GameplayState state,
                       Scanner scanner,
                       String authToken,
-                      int gameID) {
+                      int gameID,
+                      boolean isObserver) {
         this.ws = ws;
         this.state = state;
         this.scanner = scanner;
         this.authToken = authToken;
         this.gameID = gameID;
+        this.isObserver = isObserver;
     }
 
     public void run() {
@@ -132,6 +135,11 @@ public class GameplayUI {
     }
 
     private void handleResign() {
+        if (isObserver) {
+            System.out.println("Error: observers cannot resign");
+            return;
+        }
+
         // Check if game is already over
         if (isGameOver()) {
             System.out.println("Error: game is already over.");
@@ -147,7 +155,6 @@ public class GameplayUI {
                     authToken,
                     gameID
             ));
-            System.out.println("You have resigned. The game is over.");
         } else {
             System.out.println("Resignation cancelled.");
         }

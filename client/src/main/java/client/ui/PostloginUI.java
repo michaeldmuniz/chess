@@ -157,10 +157,10 @@ public class PostloginUI {
             whitePerspective = color.equals("WHITE");
         }
 
-        startGameplay(game, whitePerspective, authToken);
+        startGameplay(game, whitePerspective, authToken, false); // false = isPlayer
     }
 
-    private void startGameplay(GameData game, boolean whitePerspective, String authToken) {
+    private void startGameplay(GameData game, boolean whitePerspective, String authToken, boolean isObserver) {
         try {
             String wsUrl = "ws://localhost:8081/ws";  // Changed from 8080 to match server
 
@@ -188,7 +188,7 @@ public class PostloginUI {
             ws.sendConnect(authToken, game.gameID()); // Set pending auth before connecting
             ws.connect(); // Connect will send the command when ready
 
-            GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID());
+            GameplayUI ui = new GameplayUI(ws, state, scanner, authToken, game.gameID(), isObserver);
             ui.run();
 
             ws.close();
@@ -226,7 +226,7 @@ public class PostloginUI {
 
         System.out.println("Observing \"" + game.gameName() + "\"");
 
-        startGameplay(game, true, authToken);
+        startGameplay(game, true, authToken, true); // true = isObserver
     }
 
     private void printHelp() {
