@@ -17,6 +17,7 @@ public class GameplayState {
     private Collection<ChessMove> highlightMoves = List.of();
 
     private boolean redrawRequested = false;
+    private boolean gameLoaded = false;
 
 
     public GameplayState(boolean whitePerspective) {
@@ -27,6 +28,14 @@ public class GameplayState {
     public synchronized void setGame(ChessGame game) {
         this.currentGame = game;
         markRedraw();                // board should update when game changes
+    }
+
+    public synchronized boolean isGameLoaded() {
+        return gameLoaded;
+    }
+
+    public synchronized void setGameLoaded(boolean loaded) {
+        this.gameLoaded = loaded;
     }
 
     public synchronized ChessGame getGame() {

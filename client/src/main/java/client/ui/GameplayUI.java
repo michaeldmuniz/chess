@@ -79,7 +79,7 @@ public class GameplayUI {
 
                 case "resign"     -> handleResign();
 
-                case "move"       -> handleMove(parts);
+                case "move"       -> handleMove(parts, printer);
                 case "highlight"  -> handleHighlight(parts);
 
                 default -> System.out.println("Unknown command. Type 'help'");
@@ -89,7 +89,7 @@ public class GameplayUI {
         System.out.println("Exiting game...");
     }
 
-    private void handleMove(String[] parts) {
+    private void handleMove(String[] parts, BoardPrinter printer) {
         if (parts.length != 3) {
             System.out.println("Usage: move <from> <to>");
             return;
@@ -107,9 +107,28 @@ public class GameplayUI {
             ChessMove move = new ChessMove(from, to, null);
 
             ws.sendCommand(new MakeMoveCommand(authToken, gameID, move));
+            
+            // Wait for game update and redraw board
+            waitForGameUpdate();
+            drawBoardIfNeeded(printer);
 
         } catch (Exception ex) {
             System.out.println("Invalid move. Example: move e2 e4");
+        }
+    }
+    
+    private void waitForGameUpdate() {
+        // Wait briefly for the server to send LOAD_GAME message
+        for (int i = 0; i < 20; i++) {
+            try {
+                Thread.sleep(50);
+                if (state.shouldRedraw()) {
+                    break;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
     }
 
