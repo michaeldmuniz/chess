@@ -34,7 +34,9 @@ public class PostloginUI {
         System.out.print("[LOGGED_IN] >>> ");
         String line = scanner.nextLine().trim();
 
-        if (line.isEmpty()) return result;
+        if (line.isEmpty()) {
+            return result;
+        }
 
         String[] parts = line.split("\\s+");
         String cmd = parts[0].toLowerCase();

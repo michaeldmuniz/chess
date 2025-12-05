@@ -50,37 +50,16 @@ public class GameplayUI {
         }
 
         // Draw board immediately if game is loaded
-        if (state.shouldRedraw()) {
-            ChessGame game = state.getGame();
-            if (game != null) {
-                printer.drawBoard(
-                        game,
-                        state.isWhitePerspective(),
-                        state.getHighlightOrigin(),
-                        state.getHighlightMoves()
-                );
-            }
-            state.clearRedraw();
-        }
+        drawBoardIfNeeded(printer);
 
         while (state.isRunning()) {
-
-            if (state.shouldRedraw()) {
-                ChessGame game = state.getGame();
-                if (game != null) {
-                    printer.drawBoard(
-                            game,
-                            state.isWhitePerspective(),
-                            state.getHighlightOrigin(),
-                            state.getHighlightMoves()
-                    );
-                }
-                state.clearRedraw();
-            }
+            drawBoardIfNeeded(printer);
 
             System.out.print("[GAME] >>> ");
             String line = scanner.nextLine().trim();
-            if (line.isEmpty()) continue;
+            if (line.isEmpty()) {
+                continue;
+            }
 
             String[] parts = line.split("\\s+");
             String cmd = parts[0].toLowerCase();
@@ -203,6 +182,21 @@ public class GameplayUI {
               leave             - leave the game
               resign            - resign from the game
         """);
+    }
+
+    private void drawBoardIfNeeded(BoardPrinter printer) {
+        if (state.shouldRedraw()) {
+            ChessGame game = state.getGame();
+            if (game != null) {
+                printer.drawBoard(
+                        game,
+                        state.isWhitePerspective(),
+                        state.getHighlightOrigin(),
+                        state.getHighlightMoves()
+                );
+            }
+            state.clearRedraw();
+        }
     }
 
     private boolean isGameOver() {

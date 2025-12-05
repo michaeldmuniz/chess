@@ -53,9 +53,6 @@ public class WebSocketConnectionManager {
         return userBySession.get(ctx.sessionId());
     }
 
-    public Integer getGameId(WsContext ctx) {
-        return gameBySession.get(ctx.sessionId());
-    }
 
     public String getRole(WsContext ctx) {
         return roleBySession.get(ctx.sessionId());
@@ -71,7 +68,9 @@ public class WebSocketConnectionManager {
     }
 
     public void broadcastToGame(int gameID, ServerMessage msg) {
-        if (!sessionsInGame.containsKey(gameID)) return;
+        if (!sessionsInGame.containsKey(gameID)) {
+            return;
+        }
 
         String json = gson.toJson(msg);
 
@@ -84,7 +83,9 @@ public class WebSocketConnectionManager {
     }
 
     public void broadcastToGameExcept(WsContext excludedCtx, int gameID, ServerMessage msg) {
-        if (!sessionsInGame.containsKey(gameID)) return;
+        if (!sessionsInGame.containsKey(gameID)) {
+            return;
+        }
 
         String excludedId = excludedCtx.sessionId();
         String json = gson.toJson(msg);

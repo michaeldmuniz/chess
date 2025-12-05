@@ -59,11 +59,6 @@ public class GameplayState {
         markRedraw();
     }
 
-    public synchronized void clearHighlight() {
-        this.highlightOrigin = null;
-        this.highlightMoves = List.of();
-        markRedraw();
-    }
 
 
 
